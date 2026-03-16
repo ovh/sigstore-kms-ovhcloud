@@ -1,0 +1,114 @@
+version: "2"
+run:
+  issues-exit-code: 1
+  tests: false
+output:
+  formats:
+    text:
+      path: stdout
+      print-linter-name: true
+      print-issued-lines: true
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - dogsled
+    - dupword
+    - errcheck
+    - funlen
+    - gocognit
+    - gocritic
+    - gocyclo
+    - godot
+    - goprintffuncname
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nakedret
+    - nolintlint
+    - predeclared
+    - promlinter
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    dupl:
+      threshold: 150
+    errcheck:
+      check-type-assertions: false
+      check-blank: false
+    funlen:
+      lines: 110
+      statements: 60
+    gocognit:
+      min-complexity: 30
+    gocritic:
+      disabled-checks:
+        - hugeParam
+        - importShadow
+        - ifElseChain
+        - commentedOutCode
+      enabled-tags:
+        - performance
+        - diagnostic
+        - style
+    gocyclo:
+      min-complexity: 20
+    lll:
+      line-length: 140
+      tab-width: 1
+    misspell:
+      locale: US
+    nakedret:
+      max-func-lines: 30
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+    prealloc:
+      simple: true
+      range-loops: true
+      for-loops: true
+    unparam:
+      check-exported: false
+    staticcheck:
+      checks:
+        - all
+        - -ST1005
+        - -ST1000
+        - -ST1003
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - .*\.pb\.go$
+      - .*\.gen\.go$
+      - .*_gen\.go$
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+  exclusions:
+    generated: lax
+    paths:
+      - .*\.pb\.go$
+      - .*\.gen\.go$
+      - .*_gen\.go$
+      - third_party$
+      - builtin$
+      - examples$

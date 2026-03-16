@@ -1,0 +1,17 @@
+name: build
+on: [push]
+integrations: [ artifactory-enablers-kms ]
+
+jobs:
+  build:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    steps:
+      - uses: actions/checkout
+        id: checkout
+      - id: lint
+        run: make lint
+      - id: build
+        run: make build
+      - uses: actions/uploadArtifact
+        with:
+          path: "bin/sigstore-kms-ovhcloudkms"

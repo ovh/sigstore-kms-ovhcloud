@@ -1,2 +1,5 @@
-# see doc on: https://help.github.com/articles/about-codeowners/
-*       @ovh/okms-codeowners-team
+# THis filed is owned and manages by members of KMSaaS
+CODEOWNERS @@KMSaaS
+** @@KMSaaS
+
+AllGroupsCheck(1)

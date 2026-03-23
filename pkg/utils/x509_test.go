@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"os"
 	"path/filepath"
+	"sigstore-kms-ovhcloud/pkg/testutils"
 	"testing"
 )
 
@@ -28,7 +28,7 @@ func TestLoadCertPool(t *testing.T) {
 	t.Run("invalid pem", func(t *testing.T) {
 		dir := t.TempDir()
 		invalidFilePath := filepath.Join(dir, "fake.pem")
-		_ = os.WriteFile(invalidFilePath, []byte("invalid cert"), 0600)
+		testutils.WriteDataToTempFile(t, "", invalidFilePath, []byte("invalid cert"))
 
 		_, err := LoadCertPool(invalidFilePath)
 		if err == nil {
@@ -38,8 +38,8 @@ func TestLoadCertPool(t *testing.T) {
 
 	t.Run("valid cert", func(t *testing.T) {
 		dir := t.TempDir()
-		tc, _ := GenerateTestCert("ecdsa")
-		certFile := writeDataToTempFile(t, dir, "cert.pem", tc.CertPEM)
+		tc, _ := testutils.GenerateTestCert("ecdsa")
+		certFile := testutils.WriteDataToTempFile(t, dir, "cert.pem", tc.CertPEM)
 
 		pool, err := LoadCertPool(certFile)
 		if err != nil {
@@ -61,7 +61,7 @@ func TestLoadX509KeyPair(t *testing.T) {
 
 	t.Run("missing cert", func(t *testing.T) {
 		dir := t.TempDir()
-		key := writeDataToTempFile(t, dir, "key.pem", []byte("dummy"))
+		key := testutils.WriteDataToTempFile(t, dir, "key.pem", []byte("dummy"))
 
 		_, err := LoadX509KeyPair("", key)
 		if err == nil {
@@ -71,7 +71,7 @@ func TestLoadX509KeyPair(t *testing.T) {
 
 	t.Run("missing key", func(t *testing.T) {
 		dir := t.TempDir()
-		cert := writeDataToTempFile(t, dir, "cert.pem", []byte("dummy"))
+		cert := testutils.WriteDataToTempFile(t, dir, "cert.pem", []byte("dummy"))
 
 		_, err := LoadX509KeyPair(cert, "")
 		if err == nil {
@@ -81,8 +81,8 @@ func TestLoadX509KeyPair(t *testing.T) {
 
 	t.Run("invalid cert and key", func(t *testing.T) {
 		dir := t.TempDir()
-		cert := writeDataToTempFile(t, dir, "cert.pem", []byte("invalid cert"))
-		key := writeDataToTempFile(t, dir, "key.pem", []byte("invalid key"))
+		cert := testutils.WriteDataToTempFile(t, dir, "cert.pem", []byte("invalid cert"))
+		key := testutils.WriteDataToTempFile(t, dir, "key.pem", []byte("invalid key"))
 
 		_, err := LoadX509KeyPair(cert, key)
 		if err == nil {
@@ -92,9 +92,9 @@ func TestLoadX509KeyPair(t *testing.T) {
 
 	t.Run("valid ECDSA", func(t *testing.T) {
 		dir := t.TempDir()
-		tc, _ := GenerateTestCert("ecdsa")
-		cert := writeDataToTempFile(t, dir, "cert.pem", tc.CertPEM)
-		key := writeDataToTempFile(t, dir, "key.pem", tc.KeyPEM)
+		tc, _ := testutils.GenerateTestCert("ecdsa")
+		cert := testutils.WriteDataToTempFile(t, dir, "cert.pem", tc.CertPEM)
+		key := testutils.WriteDataToTempFile(t, dir, "key.pem", tc.KeyPEM)
 
 		certs, err := LoadX509KeyPair(cert, key)
 		if err != nil {
@@ -107,9 +107,9 @@ func TestLoadX509KeyPair(t *testing.T) {
 
 	t.Run("valid RSA", func(t *testing.T) {
 		dir := t.TempDir()
-		tc, _ := GenerateTestCert("rsa")
-		cert := writeDataToTempFile(t, dir, "cert.pem", tc.CertPEM)
-		key := writeDataToTempFile(t, dir, "key.pem", tc.KeyPEM)
+		tc, _ := testutils.GenerateTestCert("rsa")
+		cert := testutils.WriteDataToTempFile(t, dir, "cert.pem", tc.CertPEM)
+		key := testutils.WriteDataToTempFile(t, dir, "key.pem", tc.KeyPEM)
 
 		certs, err := LoadX509KeyPair(cert, key)
 		if err != nil {

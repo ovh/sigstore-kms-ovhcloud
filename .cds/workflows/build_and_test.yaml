@@ -1,0 +1,41 @@
+name: build-and-test
+on: [ push ]
+integrations: [ artifactory-enablers-kms ]
+
+jobs:
+  build:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    steps:
+      - uses: actions/checkout
+        id: checkout
+      - id: lint
+        run: make lint
+      - id: build
+        run: make build
+      - uses: actions/uploadArtifact
+        with:
+          path: build/sigstore-kms-ovhcloudkms
+
+  test:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    needs:
+      - build
+    steps:
+      - uses: actions/checkout
+        id: checkout
+      - run: |-
+          #!/bin/bash
+          set -xe
+          make test
+      - uses: actions/uploadArtifact
+        with:
+          path: build/junit.xml
+      - uses: actions/uploadArtifact
+        with:
+          path: build/coverage.html
+      - uses: actions/uploadArtifact
+        with:
+          path: build/coverage.out
+      - uses: actions/uploadArtifact
+        with:
+          path: build/test-results.json

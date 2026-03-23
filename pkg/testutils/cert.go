@@ -1,4 +1,4 @@
-package utils
+package testutils
 
 import (
 	"crypto/ecdsa"
@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"log"
 	"math/big"
 	"os"
@@ -49,7 +50,7 @@ func GenerateTestCert(algorithm string) (*TestCert, error) {
 	case "rsa":
 		priv, err = rsa.GenerateKey(rand.Reader, rsaBits)
 	default:
-		return nil, err
+		return nil, fmt.Errorf("unsupported algorithm: %s", algorithm)
 	}
 	if err != nil {
 		log.Fatalf("Failed to generate private key: %v", err)
@@ -98,11 +99,11 @@ func GenerateTestCert(algorithm string) (*TestCert, error) {
 	}, nil
 }
 
-func writeDataToTempFile(t *testing.T, dir, name string, data []byte) string {
+func WriteDataToTempFile(t *testing.T, dir, name string, data []byte) string {
 	t.Helper()
 
 	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, data, 0600); err != nil {
+	if err := os.WriteFile(path, data, 0o0600); err != nil {
 		t.Fatalf("write temp file failed: %v", err)
 	}
 

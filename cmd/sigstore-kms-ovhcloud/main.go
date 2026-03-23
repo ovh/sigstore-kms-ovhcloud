@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sigstore-kms-ovhcloud/pkg/config"
 	"sigstore-kms-ovhcloud/pkg/signing"
 
 	"github.com/sigstore/sigstore/pkg/signature/kms/cliplugin/handler"
@@ -23,11 +24,19 @@ func main() {
 		panic(err)
 	}
 
-	signerVerifier := &signing.OkmsSignerVerifier{
-		HashFunc:      pluginArgs.InitOptions.HashFunc,
-		KeyResourceID: pluginArgs.InitOptions.KeyResourceID,
+	cfg, err := config.NewConfig()
+	if err != nil {
+		_ = handler.WriteErrorResponse(os.Stdout, err)
+		panic(err)
 	}
 
+	km, err := signing.NewOkmsKeyManager(cfg)
+	if err != nil {
+		_ = handler.WriteErrorResponse(os.Stdout, err)
+		panic(err)
+	}
+
+	signerVerifier := signing.NewOkmsSignerVerifier(km, pluginArgs.InitOptions.KeyResourceID, pluginArgs.InitOptions.HashFunc)
 	_, err = handler.Dispatch(os.Stdout, os.Stdin, pluginArgs, signerVerifier)
 	if err != nil {
 		// Dispatch() will have already called WriteResponse() with the error.

@@ -1,0 +1,11 @@
+version: 1
+profile: default # Name of the active profile
+profiles:
+  default:
+    http:
+      id: okms_id
+      endpoint: https://myserver.acme.com
+      ca: /path/to/public-ca.crt # Optional if the CA is in system store
+      auth:
+        cert: /path/to/domain/cert.pem
+        key: /path/to/domain/key.pem

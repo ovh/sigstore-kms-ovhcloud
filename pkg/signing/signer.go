@@ -3,8 +3,10 @@ package signing
 import (
 	"context"
 	"crypto"
+	"fmt"
 	"io"
 
+	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
@@ -47,12 +49,12 @@ func NewOkmsSignerVerifier(km KeyManager, keyResourceID string, hashFunc crypto.
 }
 
 // DefaultAlgorithm returns the default algorithm for the signer.
-func (o okmsSignerVerifier) DefaultAlgorithm() string {
+func (o *okmsSignerVerifier) DefaultAlgorithm() string {
 	return string(defaultAlgorithm)
 }
 
 // SupportedAlgorithms returns the supported algorithms for the signer.
-func (o okmsSignerVerifier) SupportedAlgorithms() []string {
+func (o *okmsSignerVerifier) SupportedAlgorithms() []string {
 	s := make([]string, len(okmsSupportedAlgorithms))
 
 	for i := range okmsSupportedAlgorithms {
@@ -61,27 +63,35 @@ func (o okmsSignerVerifier) SupportedAlgorithms() []string {
 	return s
 }
 
-func (o okmsSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+func (o *okmsSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
+	ctx := context.Background()
+	for _, opt := range opts {
+		opt.ApplyContext(&ctx)
+	}
+
+	keyResourceID, err := uuid.Parse(o.keyResourceID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid key id: %w", err)
+	}
+	return o.keyManager.GetPublicKey(ctx, keyResourceID)
+}
+
+func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) {
+func (o *okmsSignerVerifier) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o okmsSignerVerifier) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
+func (o *okmsSignerVerifier) CreateKey(ctx context.Context, algorithm string) (crypto.PublicKey, error) {
 	// TODO implement me
 	panic("implement me")
 }
 
-func (o okmsSignerVerifier) CreateKey(ctx context.Context, algorithm string) (crypto.PublicKey, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (o okmsSignerVerifier) CryptoSigner(ctx context.Context, errFunc func(error)) (crypto.Signer, crypto.SignerOpts, error) {
+func (o *okmsSignerVerifier) CryptoSigner(ctx context.Context, errFunc func(error)) (crypto.Signer, crypto.SignerOpts, error) {
 	// TODO implement me
 	panic("implement me")
 }

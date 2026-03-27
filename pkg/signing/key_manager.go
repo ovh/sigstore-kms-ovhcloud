@@ -1,17 +1,21 @@
 package signing
 
 import (
+	"context"
+	"crypto"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"sigstore-kms-ovhcloud/pkg/config"
 	"sigstore-kms-ovhcloud/pkg/utils"
 
 	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go"
+	"github.com/ovh/okms-sdk-go/types"
 )
 
-// KeyManager TODO: it will be the interface that OkmsKeyManager will implement. Methods have not yet been defined.
 type KeyManager interface {
+	GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
 }
 
 type okmsKeyManager struct {
@@ -48,4 +52,21 @@ func buildClientConfig(tlsConfig *tls.Config) okms.ClientConfig {
 		},
 		TlsCfg: tlsConfig,
 	}
+}
+
+func (o *okmsKeyManager) GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error) {
+	serviceKey, err := o.client.GetServiceKey(ctx, o.okmsID, keyResourceID, utils.PtrTo(types.Jwk))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get service key from okms: %w", err)
+	}
+	if serviceKey == nil || len(*serviceKey.Keys) == 0 {
+		return nil, errors.New("public key is missing in the response")
+	}
+
+	key := (*serviceKey.Keys)[0]
+	publicKey, err := key.PublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert jwk to public key: %w", err)
+	}
+	return publicKey, nil
 }

@@ -54,4 +54,8 @@ These settings can be overwritten using environment variables:
 
 ## Usage
 
-Coming soon...
+### Extracting the public key
+
+```bash
+cosign public-key --key "ovhcloud://<key_id>" > cosign.pub
+```

@@ -118,3 +118,95 @@ func TestGetPublicKey(t *testing.T) {
 		assert.True(t, privateKey.PublicKey.Equal(rsaKey))
 	})
 }
+
+func TestCreateKey(t *testing.T) {
+	t.Run("unsupported algorithm", func(t *testing.T) {
+		keyManager := keyManagerMock(mocks.NewAPIMock(t), uuid.New())
+
+		keyID, err := keyManager.CreateKey(context.Background(), "my-key", "unsupported")
+
+		assert.Equal(t, uuid.Nil, keyID)
+		assert.Error(t, err)
+	})
+
+	t.Run("client error", func(t *testing.T) {
+		expectedError := errors.New("network error")
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			CreateImportServiceKey(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, expectedError)
+
+		keyID, err := keyManagerMock(apiMock, uuid.New()).CreateKey(context.Background(), "my-key", string(types.ES256))
+
+		assert.Equal(t, uuid.Nil, keyID)
+		assert.Error(t, err)
+	})
+
+	t.Run("nil UUID in response", func(t *testing.T) {
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			CreateImportServiceKey(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.GetServiceKeyResponse{Id: uuid.Nil}, nil)
+
+		keyID, err := keyManagerMock(apiMock, uuid.New()).CreateKey(context.Background(), "my-key", string(types.ES256))
+
+		assert.Equal(t, uuid.Nil, keyID)
+		assert.Error(t, err)
+	})
+
+	ecAlgorithmTests := []struct {
+		algorithm types.DigitalSignatureAlgorithms
+		curve     types.Curves
+	}{
+		{types.ES256, types.P256},
+		{types.ES384, types.P384},
+		{types.ES512, types.P521},
+	}
+	for _, test := range ecAlgorithmTests {
+		t.Run(string(test.algorithm), func(t *testing.T) {
+			okmsID, expectedID, keyName := uuid.New(), uuid.New(), "test-ec"
+			operations := []types.CryptographicUsages{types.Sign, types.Verify}
+			expectedRequest := types.CreateImportServiceKeyRequest{
+				Curve:      &test.curve,
+				Name:       keyName,
+				Operations: &operations,
+				Type:       utils.PtrTo(types.EC),
+			}
+			apiMock := mocks.NewAPIMock(t)
+			apiMock.EXPECT().
+				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), expectedRequest).
+				Return(&types.GetServiceKeyResponse{Id: expectedID}, nil)
+
+			keyID, err := keyManagerMock(apiMock, okmsID).CreateKey(context.Background(), keyName, string(test.algorithm))
+
+			require.NoError(t, err)
+			assert.Equal(t, expectedID, keyID)
+		})
+	}
+
+	rsaAlgorithmTests := []types.DigitalSignatureAlgorithms{
+		types.RS256, types.RS384, types.RS512, types.PS256, types.PS384, types.PS512,
+	}
+
+	for _, algorithm := range rsaAlgorithmTests {
+		t.Run(string(algorithm), func(t *testing.T) {
+			okmsID, expectedID, keyName := uuid.New(), uuid.New(), "test-rsa"
+			operations := []types.CryptographicUsages{types.Sign, types.Verify}
+			expectedRequest := types.CreateImportServiceKeyRequest{
+				Name:       keyName,
+				Operations: &operations,
+				Type:       utils.PtrTo(types.RSA),
+				Size:       utils.PtrTo(types.N4096),
+			}
+			apiMock := mocks.NewAPIMock(t)
+			apiMock.EXPECT().
+				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), expectedRequest).
+				Return(&types.GetServiceKeyResponse{Id: expectedID}, nil)
+
+			keyID, err := keyManagerMock(apiMock, okmsID).CreateKey(context.Background(), keyName, string(algorithm))
+
+			require.NoError(t, err)
+			assert.Equal(t, expectedID, keyID)
+		})
+	}
+}

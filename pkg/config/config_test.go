@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/knadh/koanf/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -22,19 +24,13 @@ func copyTestConfig(t *testing.T, filename string) string {
 
 	tempDir := t.TempDir()
 	configDir := filepath.Join(tempDir, ".ovh-kms")
-	if err := os.Mkdir(configDir, 0o0755); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.Mkdir(configDir, 0o0755))
 
 	content, err := os.ReadFile(filepath.Join("testdata", filename))
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	configFile := filepath.Join(configDir, "okms.yaml")
-	if err := os.WriteFile(configFile, content, 0o0644); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, os.WriteFile(configFile, content, 0o0644))
 	return tempDir
 }
 
@@ -45,19 +41,13 @@ func TestLoadEnvConfig(t *testing.T) {
 	t.Setenv("KMS_HTTP_CERT", expectedCert)
 
 	err := loadEnvConfig(k, defaultProfile)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	endpoint := k.String("profiles." + defaultProfile + ".http.endpoint")
-	if endpoint != expectedEndpoint {
-		t.Fatalf("endpoint mismatch: %s", endpoint)
-	}
+	assert.Equal(t, expectedEndpoint, endpoint)
 
 	cert := k.String("profiles." + defaultProfile + ".http.auth.cert")
-	if cert != expectedCert {
-		t.Fatalf("cert mismatch: %s", cert)
-	}
+	assert.Equal(t, expectedCert, cert)
 }
 
 func TestUnmarshalConfig(t *testing.T) {
@@ -68,18 +58,10 @@ func TestUnmarshalConfig(t *testing.T) {
 	_ = k.Set("profiles."+defaultProfile+".http.auth.key", expectedKey)
 
 	cfg, err := unmarshalConfig(k, defaultProfile)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if cfg.CA != expectedCA {
-		t.Fatalf("ca mismatch: %s", cfg.CA)
-	}
-	if cfg.OkmsID != expectedID {
-		t.Fatalf("id mismatch: %s", cfg.OkmsID)
-	}
-	if cfg.Auth.Key != expectedKey {
-		t.Fatalf("key mismatch: %s", cfg.Auth.Key)
-	}
+	require.NoError(t, err)
+	assert.Equal(t, expectedCA, cfg.CA)
+	assert.Equal(t, expectedID, cfg.OkmsID)
+	assert.Equal(t, expectedKey, cfg.Auth.Key)
 }
 
 func TestLoadFileConfig(t *testing.T) {
@@ -88,40 +70,24 @@ func TestLoadFileConfig(t *testing.T) {
 	t.Setenv("HOME", copyTestConfig(t, "valid_config.yaml"))
 
 	err := loadConfigFile(k)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	profile := k.String("profile")
-	if profile != "default" {
-		t.Fatalf("expected default profile, got %s", profile)
-	}
+	assert.Equal(t, "default", profile)
 
 	base := "profiles.default.http"
-	if k.String(base+".id") != "okms_id" {
-		t.Fatalf("id not loaded")
-	}
-	if k.String(base+".endpoint") != "https://myserver.acme.com" {
-		t.Fatalf("endpoint not loaded")
-	}
-	if k.String(base+".ca") != "/path/to/public-ca.crt" {
-		t.Fatalf("ca not loaded")
-	}
-	if k.String(base+".auth.cert") != "/path/to/domain/cert.pem" {
-		t.Fatalf("cert not loaded")
-	}
-	if k.String(base+".auth.key") != "/path/to/domain/key.pem" {
-		t.Fatalf("key not loaded")
-	}
+	assert.Equal(t, "okms_id", k.String(base+".id"))
+	assert.Equal(t, "https://myserver.acme.com", k.String(base+".endpoint"))
+	assert.Equal(t, "/path/to/public-ca.crt", k.String(base+".ca"))
+	assert.Equal(t, "/path/to/domain/cert.pem", k.String(base+".auth.cert"))
+	assert.Equal(t, "/path/to/domain/key.pem", k.String(base+".auth.key"))
 }
 
 func TestNewConfig(t *testing.T) {
 	t.Run("invalid config", func(t *testing.T) {
 		dir := t.TempDir()
 		tc, err := testutils.GenerateTestCert("ecdsa")
-		if err != nil {
-			t.Fatalf("failed to generate cert: %v", err)
-		}
+		require.NoError(t, err)
 
 		certPath := testutils.WriteDataToTempFile(t, dir, "cert.pem", []byte("invalid"))
 		keyPath := testutils.WriteDataToTempFile(t, dir, "key.pem", tc.KeyPEM)
@@ -134,17 +100,13 @@ func TestNewConfig(t *testing.T) {
 		t.Setenv("KMS_HTTP_KEY", keyPath)
 
 		_, err = NewConfig()
-		if err == nil {
-			t.Fatal("expected error, got nil")
-		}
+		assert.Error(t, err)
 	})
 
 	t.Run("valid config", func(t *testing.T) {
 		dir := t.TempDir()
 		tc, err := testutils.GenerateTestCert("ecdsa")
-		if err != nil {
-			t.Fatalf("failed to generate cert: %v", err)
-		}
+		require.NoError(t, err)
 
 		certPath := testutils.WriteDataToTempFile(t, dir, "cert.pem", tc.CertPEM)
 		keyPath := testutils.WriteDataToTempFile(t, dir, "key.pem", tc.KeyPEM)
@@ -157,27 +119,13 @@ func TestNewConfig(t *testing.T) {
 		t.Setenv("KMS_HTTP_KEY", keyPath)
 
 		cfg, err := NewConfig()
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+		require.NoError(t, err)
 
-		if cfg.OkmsID != expectedID {
-			t.Errorf("expected OkmsID=test-id, got %s", cfg.OkmsID)
-		}
-		if cfg.Endpoint != expectedEndpoint {
-			t.Errorf("unexpected endpoint: %s", cfg.Endpoint)
-		}
-		if cfg.CA != caPath {
-			t.Errorf("unexpected CA: %s", cfg.CA)
-		}
-		if cfg.Auth.Cert != certPath {
-			t.Errorf("unexpected cert path: %s", cfg.Auth.Cert)
-		}
-		if cfg.Auth.Key != keyPath {
-			t.Errorf("unexpected key path: %s", cfg.Auth.Key)
-		}
-		if cfg.TlsConfig == nil {
-			t.Error("TlsConfig should not be nil")
-		}
+		assert.Equal(t, expectedID, cfg.OkmsID)
+		assert.Equal(t, expectedEndpoint, cfg.Endpoint)
+		assert.Equal(t, caPath, cfg.CA)
+		assert.Equal(t, certPath, cfg.Auth.Cert)
+		assert.Equal(t, keyPath, cfg.Auth.Key)
+		assert.NotNil(t, cfg.TlsConfig)
 	})
 }

@@ -1,4 +1,4 @@
-# Contributing to sigstore-kms-ovhcloudkms
+# Contributing to sigstore-kms-ovhcloud
 
 This project accepts contributions. In order to contribute, you should
 pay attention to a few things:
@@ -16,8 +16,8 @@ and follow the DCO which is defined below.
 
 # Licensing for new files
 
-sigstore-kms-ovhcloudkms is licensed under a Apache 2.0 license. Anything
-contributed to sigstore-kms-ovhcloudkms must be released under this license.
+sigstore-kms-ovhcloud is licensed under a Apache 2.0 license. Anything
+contributed to sigstore-kms-ovhcloud must be released under this license.
 
 When introducing a new file into the project, please make sure it has a
 copyright header making clear under which license it's being released.

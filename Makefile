@@ -1,10 +1,10 @@
 .PHONY: build clean install lint re test tool
 
-BINARY	=	sigstore-kms-ovhcloudkms
+BINARY	=	sigstore-kms-ovhcloud
 BIN_DIR	=	$(CURDIR)/bin
 BUILD_DIR = $(CURDIR)/build
 
-CMD_PATH	=	./cmd/sigstore-kms-ovhcloudkms
+CMD_PATH	=	./cmd/sigstore-kms-ovhcloud
 
 GO	=	go
 GOLANGCI_LINT = $(BIN_DIR)/golangci-lint

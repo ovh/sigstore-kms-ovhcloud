@@ -14,7 +14,7 @@ jobs:
         run: make build
       - uses: actions/uploadArtifact
         with:
-          path: build/sigstore-kms-ovhcloudkms
+          path: build/sigstore-kms-ovhcloud
 
   test:
     runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go

@@ -1,4 +1,4 @@
-# sigstore-kms-ovhcloudkms
+# sigstore-kms-ovhcloud
 
 [Sigstore](https://sigstore.dev) KMS plugin
 for [OVHcloud KMS](https://help.ovhcloud.com/csm/en-ie-kms-quick-start?id=kb_article_view&sysparm_article=KB0063362).
@@ -19,7 +19,7 @@ To build and install the plugin, you can use this command:
 make install PREFIX=<PREFIX>
 ```
 
-By default, `PREFIX` is set to `/usr/local`, so the binary will be located in `/usr/local/bin/sigstore-kms-ovhcloudkms`.
+By default, `PREFIX` is set to `/usr/local`, so the binary will be located in `/usr/local/bin/sigstore-kms-ovhcloud`.
 
 ## Configuration
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/tls"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"sigstore-kms-ovhcloud/pkg/config"
@@ -17,6 +18,7 @@ import (
 type KeyManager interface {
 	GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
 	CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
+	Sign(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
 }
 
 type okmsKeyManager struct {
@@ -127,4 +129,17 @@ func determineAlgorithmCurve(algorithm types.DigitalSignatureAlgorithms) (types.
 	default:
 		return "", errors.New("invalid algorithm, no curve detected")
 	}
+}
+
+func (o *okmsKeyManager) Sign(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error) {
+	signature, err := o.client.Sign(ctx, o.okmsID, keyResourceID, utils.PtrTo(types.Raw), algorithm, true, digest)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign with okms: %w", err)
+	}
+
+	decodedSignature, err := base64.StdEncoding.DecodeString(signature)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode okms signature: %w", err)
+	}
+	return decodedSignature, nil
 }

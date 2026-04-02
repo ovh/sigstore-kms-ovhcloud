@@ -70,3 +70,11 @@ cosign generate-key-pair --kms "ovhcloud://<key_name>"
 ```bash
 cosign public-key --key "ovhcloud://<key_id>" > cosign.pub
 ```
+
+### Docker image
+
+#### Signing
+
+```bash
+cosign sign --key "ovhcloud://<key_id>" <my_image:v1>
+```

@@ -23,7 +23,7 @@ type TestCert struct {
 }
 
 const (
-	rsaBits      = 2028
+	rsaBits      = 4096
 	organization = "OVHcloud"
 )
 

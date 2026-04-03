@@ -42,6 +42,7 @@ okms.yaml
 # Additional dev stuff to ignore
 .vscode/
 .idea/
+cache/
 
 # Temporary changelog generated during releasing process in github action
 tmp.CHANGELOG.md

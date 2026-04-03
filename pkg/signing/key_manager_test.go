@@ -283,3 +283,45 @@ func TestSign(t *testing.T) {
 		})
 	}
 }
+
+func TestVerify(t *testing.T) {
+	t.Run("client error", func(t *testing.T) {
+		expectedError := errors.New("verifying failed")
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			Verify(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(false, expectedError)
+
+		err := keyManagerMock(apiMock, uuid.New()).Verify(context.Background(), uuid.New(), []byte("test digest"), types.ES256, []byte("test signature"))
+
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid signature", func(t *testing.T) {
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			Verify(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return(false, nil)
+
+		err := keyManagerMock(apiMock, uuid.New()).Verify(context.Background(), uuid.New(), []byte("test digest"), types.ES256, []byte("test signature"))
+
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		okmsID, keyResourceID := uuid.New(), uuid.New()
+		digest := []byte("test-digest")
+		sigBytes := []byte("test-signature")
+		algorithm := types.ES256
+		encodedSignature := base64.StdEncoding.EncodeToString(sigBytes)
+
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			Verify(mock.Anything, okmsID, keyResourceID, algorithm, true, digest, encodedSignature).
+			Return(true, nil)
+
+		err := keyManagerMock(apiMock, okmsID).Verify(context.Background(), keyResourceID, digest, algorithm, sigBytes)
+
+		assert.NoError(t, err)
+	})
+}

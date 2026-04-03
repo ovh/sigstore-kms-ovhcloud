@@ -1,6 +1,7 @@
 package signing
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -10,6 +11,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go/types"
@@ -24,6 +26,7 @@ type mockKeyManager struct {
 	getPublicKeyFn func(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
 	createKeyFn    func(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
 	signFn         func(ctx context.Context, keyID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
+	verifyFn       func(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
 }
 
 func (m *mockKeyManager) GetPublicKey(ctx context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
@@ -50,6 +53,13 @@ func (m *mockKeyManager) Sign(ctx context.Context, keyID uuid.UUID, digest []byt
 		return m.signFn(ctx, keyID, digest, algorithm)
 	}
 	return nil, nil
+}
+
+func (m *mockKeyManager) Verify(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error {
+	if m.verifyFn != nil {
+		return m.verifyFn(ctx, keyResourceID, digest, algorithm, signature)
+	}
+	return nil
 }
 
 var defaultTestKeyManager = &mockKeyManager{}
@@ -118,10 +128,10 @@ func TestSigner_PublicKey(t *testing.T) {
 	})
 
 	t.Run("success", func(t *testing.T) {
-		privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
 
-		expectedPublicKey := &privKey.PublicKey
+		expectedPublicKey := &privateKey.PublicKey
 		var receivedKeyID uuid.UUID
 		mock := &mockKeyManager{
 			getPublicKeyFn: func(_ context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
@@ -354,4 +364,102 @@ func TestSigner_SignMessage(t *testing.T) {
 			assert.Equal(t, expectedSignature, sig)
 		})
 	}
+}
+
+func TestSigner_VerifySignature(t *testing.T) {
+	t.Run("invalid key resource id", func(t *testing.T) {
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256)
+
+		err := signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
+
+		assert.ErrorContains(t, err, "invalid key id")
+	})
+
+	t.Run("signature reader error", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		readerError := errors.New("read failure")
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, _ uuid.UUID) (crypto.PublicKey, error) {
+				return &privateKey.PublicKey, nil
+			},
+		}
+		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+
+		err = signerVerifier.VerifySignature(iotest.ErrReader(readerError), bytes.NewReader([]byte("test message")))
+
+		assert.ErrorIs(t, err, readerError)
+	})
+
+	t.Run("Verify error", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		expectedError := errors.New("verify failed")
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, _ uuid.UUID) (crypto.PublicKey, error) {
+				return &privateKey.PublicKey, nil
+			},
+			verifyFn: func(_ context.Context, _ uuid.UUID, _ []byte, _ types.DigitalSignatureAlgorithms, _ []byte) error {
+				return expectedError
+			},
+		}
+		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+
+		err = signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
+
+		assert.Error(t, err)
+	})
+
+	t.Run("success with ES256", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		sigBytes := []byte("fake-signature")
+		var receivedDigest []byte
+		var receivedAlgorithm types.DigitalSignatureAlgorithms
+		var receivedSig []byte
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, _ uuid.UUID) (crypto.PublicKey, error) {
+				return &privateKey.PublicKey, nil
+			},
+			verifyFn: func(_ context.Context, _ uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, sig []byte) error {
+				receivedDigest = digest
+				receivedAlgorithm = algorithm
+				receivedSig = sig
+				return nil
+			},
+		}
+		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+
+		err = signerVerifier.VerifySignature(bytes.NewReader(sigBytes), bytes.NewReader([]byte("test message")))
+
+		require.NoError(t, err)
+		assert.NotEmpty(t, receivedDigest)
+		assert.Equal(t, types.ES256, receivedAlgorithm)
+		assert.Equal(t, sigBytes, receivedSig)
+	})
+
+	t.Run("success with RS512", func(t *testing.T) {
+		privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+		require.NoError(t, err)
+
+		var receivedAlgorithm types.DigitalSignatureAlgorithms
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, _ uuid.UUID) (crypto.PublicKey, error) {
+				return &privateKey.PublicKey, nil
+			},
+			verifyFn: func(_ context.Context, _ uuid.UUID, _ []byte, algorithm types.DigitalSignatureAlgorithms, _ []byte) error {
+				receivedAlgorithm = algorithm
+				return nil
+			},
+		}
+		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA512)
+
+		err = signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
+
+		require.NoError(t, err)
+		assert.Equal(t, types.RS512, receivedAlgorithm)
+	})
 }

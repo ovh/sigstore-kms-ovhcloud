@@ -86,9 +86,19 @@ func (o *okmsSignerVerifier) VerifySignature(signature, message io.Reader, opts 
 	panic("implement me")
 }
 
+// CreateKey creates a key pair on the KMS and returns the public key.
 func (o *okmsSignerVerifier) CreateKey(ctx context.Context, algorithm string) (crypto.PublicKey, error) {
-	// TODO implement me
-	panic("implement me")
+	keyID, err := o.keyManager.CreateKey(ctx, o.keyResourceID, algorithm)
+	if err != nil {
+		return nil, err
+	}
+	o.keyResourceID = keyID.String()
+
+	publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
+	if err != nil {
+		return nil, err
+	}
+	return publicKey, nil
 }
 
 func (o *okmsSignerVerifier) CryptoSigner(ctx context.Context, errFunc func(error)) (crypto.Signer, crypto.SignerOpts, error) {

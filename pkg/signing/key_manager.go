@@ -16,6 +16,7 @@ import (
 
 type KeyManager interface {
 	GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
+	CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
 }
 
 type okmsKeyManager struct {
@@ -30,7 +31,7 @@ func NewOkmsKeyManager(cfg *config.Config) (KeyManager, error) {
 	clientConfig := buildClientConfig(cfg.TlsConfig)
 	client, err := okms.NewRestAPIClient(cfg.Endpoint, clientConfig)
 	if err != nil {
-		return nil, fmt.Errorf("create OKMS client: %w", err)
+		return nil, fmt.Errorf("create okms client: %w", err)
 	}
 
 	okmsID, err := uuid.Parse(cfg.OkmsID)
@@ -69,4 +70,61 @@ func (o *okmsKeyManager) GetPublicKey(ctx context.Context, keyResourceID uuid.UU
 		return nil, fmt.Errorf("failed to convert jwk to public key: %w", err)
 	}
 	return publicKey, nil
+}
+
+func (o *okmsKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {
+	createKeyRequest := types.CreateImportServiceKeyRequest{
+		Name: keyResourceID,
+	}
+
+	if err := buildCreateKeyRequest(types.DigitalSignatureAlgorithms(algorithm), &createKeyRequest); err != nil {
+		return uuid.Nil, err
+	}
+	serviceKey, err := o.client.CreateImportServiceKey(ctx, o.okmsID, utils.PtrTo(types.Jwk), createKeyRequest)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to create okms key: %w", err)
+	}
+	if serviceKey == nil || serviceKey.Id == uuid.Nil {
+		return uuid.Nil, errors.New("failed to create okms key: empty response from server")
+	}
+	return serviceKey.Id, nil
+}
+
+// buildCreateKeyRequest adds the parameters to the request to be consistent according to the algorithm.
+func buildCreateKeyRequest(algorithm types.DigitalSignatureAlgorithms, request *types.CreateImportServiceKeyRequest) error {
+	operations := []types.CryptographicUsages{
+		types.Sign,
+		types.Verify,
+	}
+	request.Operations = &operations
+
+	switch algorithm {
+	case types.ES256, types.ES384, types.ES512:
+		curve, err := determineAlgorithmCurve(algorithm)
+		if err != nil {
+			return err
+		}
+		request.Curve = &curve
+		request.Type = utils.PtrTo(types.EC)
+	case types.RS256, types.RS384, types.RS512, types.PS256, types.PS384, types.PS512:
+		request.Type = utils.PtrTo(types.RSA)
+		request.Size = utils.PtrTo(types.N4096)
+	default:
+		return fmt.Errorf("unsupported algorithm: %s", algorithm)
+	}
+	return nil
+}
+
+// determineAlgorithmCurve returns the curve associated with the algorithm if it is an EC algorithm, otherwise it returns an error.
+func determineAlgorithmCurve(algorithm types.DigitalSignatureAlgorithms) (types.Curves, error) {
+	switch algorithm {
+	case types.ES256:
+		return types.P256, nil
+	case types.ES384:
+		return types.P384, nil
+	case types.ES512:
+		return types.P521, nil
+	default:
+		return "", errors.New("invalid algorithm, no curve detected")
+	}
 }

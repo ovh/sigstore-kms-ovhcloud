@@ -54,6 +54,17 @@ These settings can be overwritten using environment variables:
 
 ## Usage
 
+The plugin uses the `ovhcloud://` URI scheme followed by the specific key UUID you want to use for cryptographic
+operations.
+
+URI format : `ovhcloud://<key_uuid>`
+
+### Generating a key pair
+
+```bash
+cosign generate-key-pair --kms "ovhcloud://<key_name>"
+```
+
 ### Extracting the public key
 
 ```bash

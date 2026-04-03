@@ -18,9 +18,8 @@ import (
 // mockKeyManager implements the KeyManager interface
 type mockKeyManager struct {
 	getPublicKeyFn func(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
+	createKeyFn    func(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
 }
-
-var defaultTestKeyManager = &mockKeyManager{}
 
 func (m *mockKeyManager) GetPublicKey(ctx context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
 	if m.getPublicKeyFn != nil {
@@ -28,6 +27,20 @@ func (m *mockKeyManager) GetPublicKey(ctx context.Context, keyID uuid.UUID) (cry
 	}
 	return nil, nil
 }
+
+func (m *mockKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {
+	if m.createKeyFn != nil {
+		return m.createKeyFn(ctx, keyResourceID, algorithm)
+	}
+
+	receivedKeyID, err := uuid.Parse(keyResourceID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return receivedKeyID, nil
+}
+
+var defaultTestKeyManager = &mockKeyManager{}
 
 func TestDefaultAlgorithm(t *testing.T) {
 	signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key-id", crypto.SHA256)
@@ -111,5 +124,54 @@ func TestSigner_PublicKey(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, expectedPublicKey, publicKey)
 		assert.Equal(t, uuid.MustParse(signerVerifier.(*okmsSignerVerifier).keyResourceID), receivedKeyID)
+	})
+}
+
+func TestSigner_CreateKey(t *testing.T) {
+	t.Run("invalid key resource id", func(t *testing.T) {
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256)
+
+		publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
+
+		assert.Nil(t, publicKey)
+		assert.Error(t, err)
+	})
+
+	t.Run("key manager error", func(t *testing.T) {
+		mock := &mockKeyManager{
+			createKeyFn: func(_ context.Context, _, _ string) (uuid.UUID, error) {
+				return uuid.Nil, errors.New("error in create")
+			},
+		}
+		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+
+		publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
+
+		assert.Nil(t, publicKey)
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		expectedPublicKey := &privateKey.PublicKey
+		keyResourceID := uuid.New().String()
+		var receivedKeyID uuid.UUID
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error) {
+				receivedKeyID = keyResourceID
+				return expectedPublicKey, nil
+			},
+		}
+		signerVerifier := NewOkmsSignerVerifier(mock, keyResourceID, crypto.SHA256)
+
+		publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedPublicKey, publicKey)
+		expectedUUID := uuid.MustParse(keyResourceID)
+		assert.Equal(t, expectedUUID, receivedKeyID)
+		assert.Equal(t, expectedUUID.String(), signerVerifier.(*okmsSignerVerifier).keyResourceID)
 	})
 }

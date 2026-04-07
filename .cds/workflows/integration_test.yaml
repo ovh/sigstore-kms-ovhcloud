@@ -1,0 +1,50 @@
+name: integration_test
+integrations: [ artifactory-enablers-kms ]
+
+vars:
+  - sigstore-kms-ovhcloud
+
+jobs:
+  integration-test:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    steps:
+      - uses: actions/checkout
+        id: checkout
+
+      - id: build
+        run: make build
+
+      - id: setup-credentials
+        run: |-
+          #!/bin/bash
+          set -e
+          export KMS_HTTP_CERT_CONTENT="${{vars.sigstore-kms-ovhcloud.KMS_HTTP_CERT}}"
+          export KMS_HTTP_KEY_CONTENT="${{vars.sigstore-kms-ovhcloud.KMS_HTTP_KEY}}"
+          printf '%s' "$KMS_HTTP_CERT_CONTENT" > cert.pem
+          printf '%s' "$KMS_HTTP_KEY_CONTENT" > key.pem
+          chmod 600 cert.pem key.pem
+
+      - id: integration-test
+        run: |-
+          #!/bin/bash
+          set -e
+          export KMS_INTEGRATION_KEY_ID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEY_ID}}"
+          export KMS_HTTP_ENDPOINT="${{vars.sigstore-kms-ovhcloud.KMS_HTTP_ENDPOINT}}"
+          export KMS_HTTP_ID="${{vars.sigstore-kms-ovhcloud.KMS_HTTP_ID}}"
+          export KMS_HTTP_CERT="$PWD/cert.pem"
+          export KMS_HTTP_KEY="$PWD/key.pem"
+          trap 'rm -f cert.pem key.pem' EXIT
+          make integration-test
+
+      - uses: actions/uploadArtifact
+        with:
+          path: build/integration-junit.xml
+      - uses: actions/uploadArtifact
+        with:
+          path: build/integration-coverage.html
+      - uses: actions/uploadArtifact
+        with:
+          path: build/integration-coverage.out
+      - uses: actions/uploadArtifact
+        with:
+          path: build/integration-test-results.json

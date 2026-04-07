@@ -34,7 +34,9 @@ install: build
 integration-test: tool
 	@echo " > Running integration tests..."
 	@mkdir -p $(BUILD_DIR)
-	GOCACHE=${PWD}/cache TMPDIR=${PWD}/build $(GO) test --tags=integration ./...
+	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/integration-coverage.out --tags=integration ./... > $(BUILD_DIR)/integration-test-results.json
+	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/integration-junit.xml --raw-command -- cat $(BUILD_DIR)/integration-test-results.json
+	$(GO) tool cover -html=$(BUILD_DIR)/integration-coverage.out -o $(BUILD_DIR)/integration-coverage.html
 
 lint: tool
 	@echo " > Linting code..."

@@ -21,12 +21,12 @@ import (
 
 /*
 The following environment variable must be set:
-KMS_INTEGRATION_KEY_ID  UUID of an existing key on the target KMS instance.
+KMS_INTEGRATION_KEY_ID - UUID of an existing key on the target KMS instance.
 
 Credentials are loaded from the standard configuration (environment variables or ~/.ovh-kms/okms.yaml).
 Or with these environment variables:
 KMS_HTTP_ENDPOINT - OKMS HTTP Endpoint
-KMS_HTTP_CA - OKMS HTTP CA
+KMS_HTTP_CA - OKMS HTTP CA (Optional)
 KMS_HTTP_ID - OKMS ID
 KMS_HTTP_AUTH_CERT - OKMS HTTP Certificate
 KMS_HTTP_AUTH_KEY - OKMS HTTP Key

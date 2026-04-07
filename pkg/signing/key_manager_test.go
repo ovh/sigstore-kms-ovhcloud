@@ -29,7 +29,7 @@ func keyManagerMock(apiMock *mocks.APIMock, okmsID uuid.UUID) *okmsKeyManager {
 	}
 }
 
-func TestGetPublicKey(t *testing.T) {
+func TestKeyManager_GetPublicKey(t *testing.T) {
 	t.Run("client error", func(t *testing.T) {
 		expectedError := errors.New("network error")
 		apiMock := mocks.NewAPIMock(t)
@@ -120,7 +120,7 @@ func TestGetPublicKey(t *testing.T) {
 	})
 }
 
-func TestCreateKey(t *testing.T) {
+func TestKeyManager_CreateKey(t *testing.T) {
 	t.Run("unsupported algorithm", func(t *testing.T) {
 		keyManager := keyManagerMock(mocks.NewAPIMock(t), uuid.New())
 

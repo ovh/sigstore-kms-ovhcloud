@@ -18,10 +18,12 @@ jobs:
         run: |-
           #!/bin/bash
           set -e
-          export KMS_HTTP_CERT_CONTENT="${{vars.sigstore-kms-ovhcloud.KMS_HTTP_CERT}}"
-          export KMS_HTTP_KEY_CONTENT="${{vars.sigstore-kms-ovhcloud.KMS_HTTP_KEY}}"
-          printf '%s' "$KMS_HTTP_CERT_CONTENT" > cert.pem
-          printf '%s' "$KMS_HTTP_KEY_CONTENT" > key.pem
+          cat > cert.pem <<EOF
+          ${{vars.sigstore-kms-ovhcloud.KMS_HTTP_KEY}}
+          EOF
+          cat > key.pem <<EOF
+          ${{vars.sigstore-kms-ovhcloud.KMS_HTTP_KEY}}
+          EOF
           chmod 600 cert.pem key.pem
 
       - id: integration-test

@@ -23,6 +23,7 @@ jobs:
           EOF
           cat > $PWD/key.pem <<EOF
           ${{vars.sigstore-kms-ovhcloud.KMS_HTTP_KEY}}
+          EOF
           chmod 600 $PWD/cert.pem $PWD/key.pem
 
       - id: integration-test

@@ -33,7 +33,7 @@ jobs:
           export KMS_HTTP_ID="${{vars.sigstore-kms-ovhcloud.KMS_HTTP_ID}}"
           export KMS_HTTP_CERT="$PWD/cert.pem"
           export KMS_HTTP_KEY="$PWD/key.pem"
-          trap 'rm -f cert.pem key.pem' EXIT
+          trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
           make integration-test
 
       - uses: actions/uploadArtifact

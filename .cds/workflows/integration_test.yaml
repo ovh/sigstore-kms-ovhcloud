@@ -1,4 +1,5 @@
 name: integration_test
+on: [ push ]
 integrations: [ artifactory-enablers-kms ]
 
 vars:

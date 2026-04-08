@@ -14,6 +14,7 @@ import (
 	"sigstore-kms-ovhcloud/pkg/config"
 
 	"github.com/google/uuid"
+	"github.com/ovh/okms-sdk-go"
 	"github.com/ovh/okms-sdk-go/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,6 +55,13 @@ func loadSignerVerifier(t *testing.T, keyID string, hashFunc crypto.Hash) (*okms
 	return signerVerifier, keyManager.(*okmsKeyManager)
 }
 
+func deleteKey(t *testing.T, client *okms.Client, keyID string) {
+	t.Helper()
+
+	err := client.DeleteServiceKey(context.Background(), okmsID, keyID)
+	require.NoError(t, err)
+}
+
 func TestNewOkmsSignerVerifier(t *testing.T) {
 	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
 
@@ -81,14 +89,16 @@ func TestNewOkmsSignerVerifier(t *testing.T) {
 }
 
 func TestCreateKey(t *testing.T) {
-	signerVerifier, _ := loadSignerVerifier(t, "integration-test-new-key", crypto.SHA256)
+	signerVerifier, keyManager := loadSignerVerifier(t, "integration-test-new-key", crypto.SHA256)
 
 	publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, publicKey)
 
 	_, ok := publicKey.(*ecdsa.PublicKey)
 	assert.True(t, ok)
+
+	deleteKey(t, keyManager.client, signerVerifier.keyResourceID)
 }
 
 func TestPublicKey(t *testing.T) {

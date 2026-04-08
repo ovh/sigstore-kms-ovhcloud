@@ -18,13 +18,12 @@ jobs:
         run: |-
           #!/bin/bash
           set -e
-          cat > cert.pem <<EOF
-          ${{vars.sigstore-kms-ovhcloud.KMS_HTTP_KEY}}
+          cat > $PWD/cert.pem <<EOF
+          ${{vars.sigstore-kms-ovhcloud.KMS_HTTP_CERT}}
           EOF
-          cat > key.pem <<EOF
+          cat > $PWD/key.pem <<EOF
           ${{vars.sigstore-kms-ovhcloud.KMS_HTTP_KEY}}
-          EOF
-          chmod 600 cert.pem key.pem
+          chmod 600 $PWD/cert.pem $PWD/key.pem
 
       - id: integration-test
         run: |-

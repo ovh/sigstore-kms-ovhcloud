@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"encoding/base64"
 	"errors"
 	"testing"
 
@@ -207,6 +208,78 @@ func TestCreateKey(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, expectedID, keyID)
+		})
+	}
+}
+
+func TestSign(t *testing.T) {
+	t.Run("client error", func(t *testing.T) {
+		expectedError := errors.New("signing failed")
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			Sign(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return("", expectedError)
+
+		signature, err := keyManagerMock(apiMock, uuid.New()).Sign(context.Background(), uuid.New(), []byte("digest"), types.ES256)
+
+		assert.Nil(t, signature)
+		assert.Error(t, err)
+	})
+
+	t.Run("invalid response", func(t *testing.T) {
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			Sign(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+			Return("not-valid", nil)
+
+		signature, err := keyManagerMock(apiMock, uuid.New()).Sign(context.Background(), uuid.New(), []byte("digest"), types.ES256)
+
+		assert.Nil(t, signature)
+		assert.ErrorContains(t, err, "failed to decode okms signature")
+	})
+
+	t.Run("successful sign", func(t *testing.T) {
+		rawSignature := []byte("raw signature")
+		encodedSignature := base64.StdEncoding.EncodeToString(rawSignature)
+
+		okmsID, keyID := uuid.New(), uuid.New()
+		digest := []byte("test digest")
+		algorithm := types.ES256
+
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			Sign(mock.Anything, okmsID, keyID, utils.PtrTo(types.Raw), algorithm, true, digest).
+			Return(encodedSignature, nil)
+
+		signature, err := keyManagerMock(apiMock, okmsID).Sign(context.Background(), keyID, digest, algorithm)
+
+		require.NoError(t, err)
+		assert.Equal(t, rawSignature, signature)
+	})
+
+	signAlgorithmTests := []types.DigitalSignatureAlgorithms{
+		types.ES256, types.ES384, types.ES512,
+		types.RS256, types.RS384, types.RS512,
+		types.PS256, types.PS384, types.PS512,
+	}
+
+	for _, algorithm := range signAlgorithmTests {
+		t.Run("successful sign with "+string(algorithm), func(t *testing.T) {
+			rawSignature := []byte("signature for " + string(algorithm))
+			encodedSignature := base64.StdEncoding.EncodeToString(rawSignature)
+
+			okmsID, keyID := uuid.New(), uuid.New()
+			digest := []byte("digest")
+
+			apiMock := mocks.NewAPIMock(t)
+			apiMock.EXPECT().
+				Sign(mock.Anything, okmsID, keyID, utils.PtrTo(types.Raw), algorithm, true, digest).
+				Return(encodedSignature, nil)
+
+			signature, err := keyManagerMock(apiMock, okmsID).Sign(context.Background(), keyID, digest, algorithm)
+
+			require.NoError(t, err)
+			assert.Equal(t, rawSignature, signature)
 		})
 	}
 }

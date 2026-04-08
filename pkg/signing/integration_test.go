@@ -1,5 +1,3 @@
-//go:build integration
-
 package signing
 
 import (
@@ -55,10 +53,18 @@ func loadSignerVerifier(t *testing.T, keyID string, hashFunc crypto.Hash) (*okms
 	return signerVerifier, keyManager.(*okmsKeyManager)
 }
 
-func deleteKey(t *testing.T, client *okms.Client, keyID string) {
+func deleteKey(t *testing.T, client *okms.Client, keyResourceID string) {
 	t.Helper()
 
-	err := client.DeleteServiceKey(context.Background(), okmsID, keyID)
+	okmsIDStr := os.Getenv("KMS_HTTP_ID")
+	okmsID, err := uuid.Parse(okmsIDStr)
+	require.NoError(t, err)
+	keyID, err := uuid.Parse(keyResourceID)
+	require.NoError(t, err)
+
+	err = client.DeactivateServiceKey(context.Background(), okmsID, keyID, types.CessationOfOperation)
+	require.NoError(t, err)
+	err = client.DeleteServiceKey(context.Background(), okmsID, keyID)
 	require.NoError(t, err)
 }
 

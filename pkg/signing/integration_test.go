@@ -4,7 +4,6 @@ package signing
 
 import (
 	"bytes"
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"os"
@@ -64,9 +63,9 @@ func deleteKey(t *testing.T, client *okms.Client, keyResourceID string) {
 	keyID, err := uuid.Parse(keyResourceID)
 	require.NoError(t, err)
 
-	err = client.DeactivateServiceKey(context.Background(), okmsID, keyID, types.CessationOfOperation)
+	err = client.DeactivateServiceKey(t.Context(), okmsID, keyID, types.CessationOfOperation)
 	require.NoError(t, err)
-	err = client.DeleteServiceKey(context.Background(), okmsID, keyID)
+	err = client.DeleteServiceKey(t.Context(), okmsID, keyID)
 	require.NoError(t, err)
 }
 
@@ -99,7 +98,7 @@ func TestNewOkmsSignerVerifier(t *testing.T) {
 func TestCreateKey(t *testing.T) {
 	signerVerifier, keyManager := loadSignerVerifier(t, "integration-test-new-key", crypto.SHA256)
 
-	publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
+	publicKey, err := signerVerifier.CreateKey(t.Context(), string(types.ES256))
 	require.NoError(t, err)
 	assert.NotNil(t, publicKey)
 

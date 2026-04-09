@@ -27,7 +27,7 @@ Credentials are loaded from the standard configuration (environment variables or
 Or with these environment variables:
 KMS_HTTP_ENDPOINT - OKMS HTTP Endpoint
 KMS_HTTP_CA - OKMS HTTP CA (Optional)
-KMS_HTTP_ID - OKMS ID
+KMS_HTTP_OKMSID - OKMS ID
 KMS_HTTP_AUTH_CERT - OKMS HTTP Certificate
 KMS_HTTP_AUTH_KEY - OKMS HTTP Key
 */
@@ -57,7 +57,7 @@ func loadSignerVerifier(t *testing.T, keyID string, hashFunc crypto.Hash) (*okms
 func deleteKey(t *testing.T, client *okms.Client, keyResourceID string) {
 	t.Helper()
 
-	okmsIDStr := os.Getenv("KMS_HTTP_ID")
+	okmsIDStr := os.Getenv("KMS_HTTP_OKMSID")
 	okmsID, err := uuid.Parse(okmsIDStr)
 	require.NoError(t, err)
 	keyID, err := uuid.Parse(keyResourceID)

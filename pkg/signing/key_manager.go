@@ -19,6 +19,7 @@ type KeyManager interface {
 	GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
 	CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
 	Sign(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
+	Verify(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
 }
 
 type okmsKeyManager struct {
@@ -142,4 +143,17 @@ func (o *okmsKeyManager) Sign(ctx context.Context, keyResourceID uuid.UUID, dige
 		return nil, fmt.Errorf("failed to decode okms signature: %w", err)
 	}
 	return decodedSignature, nil
+}
+
+func (o *okmsKeyManager) Verify(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error {
+	encodedSignature := base64.StdEncoding.EncodeToString(signature)
+
+	isValid, err := o.client.Verify(ctx, o.okmsID, keyResourceID, algorithm, true, digest, encodedSignature)
+	if err != nil {
+		return fmt.Errorf("failed to verify with okms: %w", err)
+	}
+	if !isValid {
+		return errors.New("signature verification failed")
+	}
+	return nil
 }

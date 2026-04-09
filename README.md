@@ -78,3 +78,9 @@ cosign public-key --key "ovhcloud://<key_id>" > cosign.pub
 ```bash
 cosign sign --key "ovhcloud://<key_id>" <my_image:v1>
 ```
+
+#### Verifying
+
+```bash
+cosign verify --key "ovhcloud://<key_id>" <my_image:v1>
+```

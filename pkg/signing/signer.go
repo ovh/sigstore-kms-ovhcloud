@@ -116,6 +116,49 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 	return o.keyManager.Sign(ctx, keyID, digest, algorithm)
 }
 
+// VerifySignature verifies a digital signature.
+//
+// Return nil if the signature is valid, or an error if verification fails.
+func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...signature.VerifyOption) error {
+	var digest []byte
+	var err error
+	var signerOpts crypto.SignerOpts = o.hashFunc
+	ctx := context.Background()
+
+	for _, opt := range opts {
+		opt.ApplyContext(&ctx)
+		opt.ApplyDigest(&digest)
+		opt.ApplyCryptoSignerOpts(&signerOpts)
+	}
+
+	hashFunc := signerOpts.HashFunc()
+	if len(digest) == 0 {
+		digest, _, err = signature.ComputeDigestForVerifying(message, hashFunc, okmsSupportedHashFuncs, opts...)
+		if err != nil {
+			return err
+		}
+	}
+
+	keyID, err := uuid.Parse(o.keyResourceID)
+	if err != nil {
+		return fmt.Errorf("invalid key id: %w", err)
+	}
+	publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
+	if err != nil {
+		return err
+	}
+	algorithm, err := determineAlgorithm(publicKey, hashFunc, signerOpts)
+	if err != nil {
+		return err
+	}
+	sigBytes, err := io.ReadAll(sig)
+	if err != nil {
+		return fmt.Errorf("reading signature: %w", err)
+	}
+
+	return o.keyManager.Verify(ctx, keyID, digest, algorithm, sigBytes)
+}
+
 // determineAlgorithm determines the digital signature algorithm to use based on the public key type, hash function, and signer options.
 func determineAlgorithm(publicKey crypto.PublicKey, hashFunc crypto.Hash, opts crypto.SignerOpts) (types.DigitalSignatureAlgorithms, error) {
 	switch key := publicKey.(type) {
@@ -148,11 +191,6 @@ func determineAlgorithm(publicKey crypto.PublicKey, hashFunc crypto.Hash, opts c
 	default:
 		return "", fmt.Errorf("unsupported algorithm")
 	}
-}
-
-func (o *okmsSignerVerifier) VerifySignature(signature, message io.Reader, opts ...signature.VerifyOption) error {
-	// TODO implement me
-	panic("implement me")
 }
 
 // CreateKey creates a key pair on the KMS and returns the public key.

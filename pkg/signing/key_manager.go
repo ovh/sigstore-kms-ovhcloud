@@ -36,8 +36,11 @@ func NewOkmsKeyManager(cfg *config.Config) (KeyManager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create okms client: %w", err)
 	}
+	if cfg.Auth.Type == "token" && cfg.Auth.Token != "" {
+		client.SetCustomHeader("Authorization", "Bearer "+cfg.Auth.Token)
+	}
 
-	okmsID, err := uuid.Parse(cfg.OkmsID)
+	okmsID, err := uuid.Parse(cfg.Auth.OkmsID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid okms id: %w", err)
 	}

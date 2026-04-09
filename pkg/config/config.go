@@ -16,14 +16,16 @@ import (
 type Config struct {
 	Endpoint  string     `koanf:"endpoint"`
 	CA        string     `koanf:"ca"`
-	OkmsID    string     `koanf:"id"`
 	Auth      AuthConfig `koanf:"auth"`
 	TlsConfig *tls.Config
 }
 
 type AuthConfig struct {
-	Cert string `koanf:"cert"`
-	Key  string `koanf:"key"`
+	Type   string `koanf:"type"`
+	Cert   string `koanf:"cert"`
+	Key    string `koanf:"key"`
+	OkmsID string `koanf:"okmsId"`
+	Token  string `koanf:"token"`
 }
 
 const (
@@ -99,7 +101,7 @@ func resolveProfile(k *koanf.Koanf) string {
 func unmarshalConfig(k *koanf.Koanf, profile string) (*Config, error) {
 	var cfg Config
 
-	path := strings.Join([]string{"profiles", profile, "http"}, ".")
+	path := strings.Join([]string{"profiles", profile, "restapi"}, ".")
 	if err := k.Unmarshal(path, &cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}

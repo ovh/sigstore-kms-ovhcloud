@@ -35,22 +35,33 @@ version: 1
 profile: default # Name of the active profile
 profiles:
   default:
-    http:
-      id: okms_id
+    restapi:
       endpoint: https://myserver.acme.com
       ca: /path/to/public-ca.crt # Optional if the CA is in system store
       auth:
+        type: mtls # Optional, default to "mtls"
         cert: /path/to/domain/cert.pem
         key: /path/to/domain/key.pem
+
+  token-profile:
+    restapi:
+      endpoint: https://myserver.acme.com
+      ca: /path/to/public-ca.crt # Optional if the CA is in system store
+      auth:
+        type: token
+        token: token
+        okmsId: okms_id
 ```
 
 These settings can be overwritten using environment variables:
 
-- `KMS_HTTP_ID`
-- `KMS_HTTP_ENDPOINT`
-- `KMS_HTTP_CA`
-- `KMS_HTTP_CERT`
-- `KMS_HTTP_KEY`
+- `KMS_RESTAPI_ENDPOINT`
+- `KMS_RESTAPI_CA`
+- `KMS_RESTAPI_TYPE`
+- `KMS_RESTAPI_CERT`
+- `KMS_RESTAPI_KEY`
+- `KMS_RESTAPI_OKMSID`
+- `KMS_RESTAPI_TOKEN`
 
 ## Usage
 

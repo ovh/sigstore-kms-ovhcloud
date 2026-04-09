@@ -17,7 +17,7 @@ func loadEnvConfig(k *koanf.Koanf, profile string) error {
 
 // normalizeEnvVar is a transform function to normalize env var to the corresponding YAML format.
 //
-// Example: "KMS_HTTP_ENDPOINT" -> "profiles.default.http.endpoint".
+// Example: "KMS_RESTAPI_ENDPOINT" -> "profiles.default.restapi.endpoint".
 func normalizeEnvVar(profile string) func(string, string) (string, any) {
 	return func(key, value string) (string, any) {
 		key = strings.TrimPrefix(key, envPrefix)
@@ -34,14 +34,14 @@ func normalizeEnvVar(profile string) func(string, string) (string, any) {
 
 func isAuthField(field string) bool {
 	switch field {
-	case "cert", "key":
+	case "cert", "key", "token", "okmsid", "type":
 		return true
 	default:
 		return false
 	}
 }
 
-// buildAuthKey concatenates strings to correspond to the YAML format: "profiles.default.http.auth.<key>".
+// buildAuthKey concatenates strings to correspond to the YAML format: "profiles.default.restapi.auth.<key>".
 func buildAuthKey(profile, connectionType, key string) string {
 	return strings.Join([]string{"profiles", profile, connectionType, "auth", key}, ".")
 }

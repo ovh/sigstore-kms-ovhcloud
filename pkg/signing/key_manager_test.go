@@ -212,7 +212,7 @@ func TestKeyManager_CreateKey(t *testing.T) {
 	}
 }
 
-func TestSign(t *testing.T) {
+func TestKeyManager_Sign(t *testing.T) {
 	t.Run("client error", func(t *testing.T) {
 		expectedError := errors.New("signing failed")
 		apiMock := mocks.NewAPIMock(t)
@@ -284,7 +284,7 @@ func TestSign(t *testing.T) {
 	}
 }
 
-func TestVerify(t *testing.T) {
+func TestKeyManager_Verify(t *testing.T) {
 	t.Run("client error", func(t *testing.T) {
 		expectedError := errors.New("verifying failed")
 		apiMock := mocks.NewAPIMock(t)

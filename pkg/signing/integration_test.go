@@ -25,11 +25,11 @@ KMS_INTEGRATION_KEY_ID - UUID of an existing key on the target KMS instance.
 
 Credentials are loaded from the standard configuration (environment variables or ~/.ovh-kms/okms.yaml).
 Or with these environment variables:
-KMS_HTTP_ENDPOINT - OKMS HTTP Endpoint
-KMS_HTTP_CA - OKMS HTTP CA (Optional)
-KMS_HTTP_OKMSID - OKMS ID
-KMS_HTTP_AUTH_CERT - OKMS HTTP Certificate
-KMS_HTTP_AUTH_KEY - OKMS HTTP Key
+KMS_RESTAPI_ENDPOINT - OKMS HTTP Endpoint
+KMS_RESTAPI_CA - OKMS HTTP CA (Optional)
+KMS_RESTAPI_OKMSID - OKMS ID
+KMS_RESTAPI_AUTH_CERT - OKMS HTTP Certificate
+KMS_RESTAPI_AUTH_KEY - OKMS HTTP Key
 */
 
 func TestMain(m *testing.M) {
@@ -57,7 +57,7 @@ func loadSignerVerifier(t *testing.T, keyID string, hashFunc crypto.Hash) (*okms
 func deleteKey(t *testing.T, client *okms.Client, keyResourceID string) {
 	t.Helper()
 
-	okmsIDStr := os.Getenv("KMS_HTTP_OKMSID")
+	okmsIDStr := os.Getenv("KMS_RESTAPI_OKMSID")
 	okmsID, err := uuid.Parse(okmsIDStr)
 	require.NoError(t, err)
 	keyID, err := uuid.Parse(keyResourceID)
@@ -89,7 +89,7 @@ func TestNewOkmsSignerVerifier(t *testing.T) {
 	okmsKeyManager, ok := okmsSignerVerifier.keyManager.(*okmsKeyManager)
 	require.True(t, ok)
 
-	expectedOkmsID, err := uuid.Parse(cfg.OkmsID)
+	expectedOkmsID, err := uuid.Parse(cfg.Auth.OkmsID)
 	require.NoError(t, err)
 
 	assert.Equal(t, okmsKeyManager.okmsID, expectedOkmsID)

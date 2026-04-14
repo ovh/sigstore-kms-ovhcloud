@@ -13,6 +13,7 @@ import (
 	"github.com/ovh/okms-sdk-go/types"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 var okmsSupportedHashFuncs = []crypto.Hash{
@@ -208,7 +209,45 @@ func (o *okmsSignerVerifier) CreateKey(ctx context.Context, algorithm string) (c
 	return publicKey, nil
 }
 
+type cryptoSignerWrapper struct {
+	ctx      context.Context
+	hashFunc crypto.Hash
+	sv       *okmsSignerVerifier
+	errFunc  func(error)
+}
+
+func (c cryptoSignerWrapper) Public() crypto.PublicKey {
+	publicKey, err := c.sv.PublicKey(options.WithContext(c.ctx))
+	if err != nil && c.errFunc != nil {
+		c.errFunc(err)
+	}
+	return publicKey
+}
+
+func (c cryptoSignerWrapper) Sign(_ io.Reader, digest []byte, opts crypto.SignerOpts) ([]byte, error) {
+	hashFunc := c.hashFunc
+	if opts != nil {
+		hashFunc = opts.HashFunc()
+	}
+
+	okmsOpts := []signature.SignOption{
+		options.WithContext(c.ctx),
+		options.WithDigest(digest),
+		options.WithCryptoSignerOpts(hashFunc),
+	}
+
+	return c.sv.SignMessage(nil, okmsOpts...)
+}
+
+// CryptoSigner returns a crypto.Signer object that uses the underlying SignerVerifier, along with a crypto.SignerOpts object
+// that allows the KMS to be used in APIs that only accept the standard golang objects.
 func (o *okmsSignerVerifier) CryptoSigner(ctx context.Context, errFunc func(error)) (crypto.Signer, crypto.SignerOpts, error) {
-	// TODO implement me
-	panic("implement me")
+	csw := &cryptoSignerWrapper{
+		ctx:      ctx,
+		hashFunc: o.hashFunc,
+		sv:       o,
+		errFunc:  errFunc,
+	}
+
+	return csw, o.hashFunc, nil
 }

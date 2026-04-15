@@ -1,4 +1,4 @@
-.PHONY: build clean install lint re test tool
+.PHONY: build clean install integration-test lint re test tool
 
 BINARY	=	sigstore-kms-ovhcloud
 BIN_DIR	=	$(CURDIR)/bin
@@ -31,6 +31,13 @@ install: build
 		&& echo "Done. $(BINARY) is installed in $(PREFIX)/bin" \
 		|| echo "Try: sudo make install\n or change the installation path: make install PREFIX=<PREFIX>"
 
+integration-test: tool
+	@echo " > Running integration tests..."
+	@mkdir -p $(BUILD_DIR)
+	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/integration-coverage.out --tags=integration ./... > $(BUILD_DIR)/integration-test-results.json
+	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/integration-junit.xml --raw-command -- cat $(BUILD_DIR)/integration-test-results.json
+	$(GO) tool cover -html=$(BUILD_DIR)/integration-coverage.out -o $(BUILD_DIR)/integration-coverage.html
+
 lint: tool
 	@echo " > Linting code..."
 	@$(GOLANGCI_LINT) run
@@ -40,9 +47,9 @@ re: clean build
 test: tool
 	@echo " > Running tests..."
 	@mkdir -p $(BUILD_DIR)
-	go test -v -json -coverprofile=$(BUILD_DIR)/coverage.out ./... > $(BUILD_DIR)/test-results.json
+	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/coverage.out ./... > $(BUILD_DIR)/test-results.json
 	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/junit.xml --raw-command -- cat $(BUILD_DIR)/test-results.json
-	go tool cover -html=$(BUILD_DIR)/coverage.out -o $(BUILD_DIR)/coverage.html
+	$(GO) tool cover -html=$(BUILD_DIR)/coverage.out -o $(BUILD_DIR)/coverage.html
 
 tool:
 	@echo " > Installing tools..."

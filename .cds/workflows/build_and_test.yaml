@@ -2,6 +2,9 @@ name: build-and-test
 on: [ push ]
 integrations: [ artifactory-enablers-kms ]
 
+vars:
+  - sigstore-kms-ovhcloud
+
 jobs:
   build:
     runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
@@ -16,26 +19,47 @@ jobs:
         with:
           path: build/sigstore-kms-ovhcloud
 
-  test:
+  integration-test:
     runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
     needs:
       - build
     steps:
       - uses: actions/checkout
         id: checkout
-      - run: |-
+
+      - id: setup-credentials
+        run: |-
           #!/bin/bash
-          set -xe
-          make test
+          set -e
+          cat > $PWD/cert.pem <<EOF
+          ${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_CERT}}
+          EOF
+          cat > $PWD/key.pem <<EOF
+          ${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_KEY}}
+          EOF
+          chmod 600 $PWD/cert.pem $PWD/key.pem
+
+      - id: integration-test
+        run: |-
+          #!/bin/bash
+          set -e
+          export KMS_INTEGRATION_KEY_ID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEY_ID}}"
+          export KMS_RESTAPI_ENDPOINT="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_ENDPOINT}}"
+          export KMS_RESTAPI_OKMSID="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_OKMSID}}"
+          export KMS_RESTAPI_CERT="$PWD/cert.pem"
+          export KMS_RESTAPI_KEY="$PWD/key.pem"
+          trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
+          make integration-test
+
       - uses: actions/uploadArtifact
         with:
-          path: build/junit.xml
+          path: build/integration-junit.xml
       - uses: actions/uploadArtifact
         with:
-          path: build/coverage.html
+          path: build/integration-coverage.html
       - uses: actions/uploadArtifact
         with:
-          path: build/coverage.out
+          path: build/integration-coverage.out
       - uses: actions/uploadArtifact
         with:
-          path: build/test-results.json
+          path: build/integration-test-results.json

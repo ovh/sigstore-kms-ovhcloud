@@ -30,7 +30,7 @@ jobs:
       - id: setup-credentials
         run: |-
           #!/bin/bash
-          set -e
+          set -euo pipefail
           cat > $PWD/cert.pem <<EOF
           ${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_CERT}}
           EOF
@@ -42,7 +42,7 @@ jobs:
       - id: integration-test
         run: |-
           #!/bin/bash
-          set -e
+          set -euo pipefail
           export KMS_INTEGRATION_KEY_ID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEY_ID}}"
           export KMS_RESTAPI_ENDPOINT="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_ENDPOINT}}"
           export KMS_RESTAPI_OKMSID="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_OKMSID}}"
@@ -63,3 +63,70 @@ jobs:
       - uses: actions/uploadArtifact
         with:
           path: build/integration-test-results.json
+
+  e2e-test:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    needs:
+      - integration-test
+    steps:
+      - uses: actions/checkout
+        id: checkout
+
+      - name: Download sigstore-kms-ovhcloud artifact
+        uses: actions/downloadArtifact
+        with:
+          name: sigstore-kms-ovhcloud
+          path: .
+
+      - id: setup-credentials
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          cat > $PWD/cert.pem <<EOF
+          ${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_CERT}}
+          EOF
+          cat > $PWD/key.pem <<EOF
+          ${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_KEY}}
+          EOF
+          chmod 600 $PWD/cert.pem $PWD/key.pem
+
+      - id: cosign-cache-restore
+        uses: actions/cacheRestore
+        with:
+          path: .
+          key: ${{vars.sigstore-kms-ovhcloud.COSIGN_KEY}}_${{vars.sigstore-kms-ovhcloud.COSIGN_VERSION}}
+
+      - id: download-cosign
+        if: steps.cosign-cache-restore.outputs.cache-hit != 'true'
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          curl -sL "https://github.com/sigstore/cosign/releases/download/${{vars.sigstore-kms-ovhcloud.COSIGN_VERSION}}/${{vars.sigstore-kms-ovhcloud.COSIGN_KEY}}" -o cosign
+
+      - id: cosign-cache-save
+        uses: actions/cacheSave
+        if: steps.cosign-cache-restore.outputs.cache-hit != 'true' && steps.download-cosign.result == 'success'
+        with:
+          path: cosign
+          key: ${{vars.sigstore-kms-ovhcloud.COSIGN_KEY}}_${{vars.sigstore-kms-ovhcloud.COSIGN_VERSION}}
+
+      - id: setup-tools
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          chmod +x cosign
+          chmod +x sigstore-kms-ovhcloud
+
+      - id: e2e-test
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          export KMS_INTEGRATION_KEY_ID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEY_ID}}"
+          export KMS_RESTAPI_ENDPOINT="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_ENDPOINT}}"
+          export KMS_RESTAPI_OKMSID="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_OKMSID}}"
+          export KMS_RESTAPI_CERT="$PWD/cert.pem"
+          export KMS_RESTAPI_KEY="$PWD/key.pem"
+          trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
+          export PATH="$PATH:$(pwd)"
+          chmod +x scripts/run-e2e.sh
+          ./scripts/run-e2e.sh

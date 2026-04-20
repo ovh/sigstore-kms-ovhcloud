@@ -73,13 +73,13 @@ URI format : `ovhcloud://<key_uuid>`
 ### Generating a key pair
 
 ```bash
-cosign generate-key-pair --kms "ovhcloud://<key_name>"
+cosign generate-key-pair --kms ovhcloud://<key_name>
 ```
 
 ### Extracting the public key
 
 ```bash
-cosign public-key --key "ovhcloud://<key_id>" > cosign.pub
+cosign public-key --key ovhcloud://<key_id>
 ```
 
 ### Docker image
@@ -87,11 +87,11 @@ cosign public-key --key "ovhcloud://<key_id>" > cosign.pub
 #### Signing
 
 ```bash
-cosign sign --key "ovhcloud://<key_id>" <my_image:v1>
+cosign sign --key ovhcloud://<key_id> <my_image>@<image_digest>
 ```
 
 #### Verifying
 
 ```bash
-cosign verify --key "ovhcloud://<key_id>" <my_image:v1>
+cosign verify --key ovhcloud://<key_id> <my_image>@<image_digest>
 ```

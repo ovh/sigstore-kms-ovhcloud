@@ -14,10 +14,12 @@ jobs:
       - id: lint
         run: make lint
       - id: build
-        run: make build
+        run: |
+          make build
+          tar -cvzf sigstore-kms-ovhcloud.tar.gz -C build sigstore-kms-ovhcloud
       - uses: actions/uploadArtifact
         with:
-          path: build/sigstore-kms-ovhcloud
+          path: sigstore-kms-ovhcloud.tar.gz
 
   integration-test:
     runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
@@ -75,7 +77,7 @@ jobs:
       - name: Download sigstore-kms-ovhcloud artifact
         uses: actions/downloadArtifact
         with:
-          name: sigstore-kms-ovhcloud
+          name: sigstore-kms-ovhcloud.tar.gz
           path: .
 
       - id: setup-credentials
@@ -115,6 +117,7 @@ jobs:
           #!/bin/bash
           set -euo pipefail
           chmod +x cosign
+          tar -xvzf sigstore-kms-ovhcloud.tar.gz
           chmod +x sigstore-kms-ovhcloud
 
       - id: e2e-test
@@ -130,3 +133,20 @@ jobs:
           export PATH="$PATH:$(pwd)"
           chmod +x scripts/run-e2e.sh
           ./scripts/run-e2e.sh
+
+  release:
+    runs-on: KMSAAS/stash_ovh_net/cen/kmsaas-cds-workers/kms-base-go
+    needs:
+      - e2e-test
+    steps:
+      - uses: actions/checkout
+        id: checkout
+      - name: Download sigstore-kms-ovhcloud.tar.gz artifact
+        uses: actions/downloadArtifact
+        with:
+          name: sigstore-kms-ovhcloud.tar.gz
+          path: .
+      - uses: actions/artifactoryRelease
+        with:
+          artifacts: sigstore-kms-ovhcloud.tar.gz
+

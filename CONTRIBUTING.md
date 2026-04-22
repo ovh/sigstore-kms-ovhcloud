@@ -3,11 +3,11 @@
 This project accepts contributions. In order to contribute, you should
 pay attention to a few things:
 
-1. your code must be unit-tested
-2. your code must be documented
-3. your work must be signed (see below)
-4. you may contribute through GitHub Pull Requests
-5. Commits follow [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) style (see below)
+1. your code must follow the coding style rules
+2. your code must be unit-tested
+3. your code must be documented
+4. your work must be signed (see below)
+5. you may contribute through GitHub Pull Requests
 
 # Submitting Modifications
 
@@ -21,81 +21,6 @@ contributed to sigstore-kms-ovhcloud must be released under this license.
 
 When introducing a new file into the project, please make sure it has a
 copyright header making clear under which license it's being released.
-
-# Commit Message Guidelines
-
-We have very precise rules over how our git commit messages can be formatted.  This leads to **more
-readable messages** that are easy to follow when looking through the **project history**.  But also,
-we use the git commit messages to **generate the change log**.
-
-Commits descriptions MUST follow [conventional commit](https://www.conventionalcommits.org/en/v1.0.0/) style.
-
-## Commit Message Format
-Each commit message consists of a **header**, a **body** and a **footer**.  The header has a special
-format that includes a **type**, a **scope** and a **subject**:
-
-```
-<type>(<scope>): <subject>
-<BLANK LINE>
-<body>
-<BLANK LINE>
-<footer>
-```
-
-The **header** is mandatory and the **scope** of the header is optional.
-
-Any line of the commit message cannot be longer 100 characters! This allows the message to be easier
-to read on BitBucket as well as in various git tools.
-
-Samples:
-
-```
-docs(changelog): update changelog to v12.26.5
-```
-```
-fix(release): need to depend on latest foobar
-
-It fixes the critical CVE #1233
-```
-
-## Revert
-If the commit reverts a previous commit, it should begin with `revert: `, followed by the header of the reverted commit. In the body it should say: `This reverts commit <hash>.`, where the hash is the SHA of the commit being reverted.
-
-## Type
-Must be one of the following:
-
-* **build**: Changes that affect the build system or external dependencies
-* **ci**: Changes to our CI configuration files and scripts
-* **docs**: Documentation only changes
-* **feat**: A new feature
-* **fix**: A bug fix
-* **perf**: A code change that improves performance
-* **refactor**: A code change that neither fixes a bug nor adds a feature
-* **style**: Changes that do not affect the meaning of the code (white-space, formatting, missing semicolons, etc.)
-* **test**: Adding missing tests or correcting existing tests
-
-## Scope
-The scope should be the name of the package affected (as perceived by the person reading the changelog generated from commit messages.)
-There are currently a few exceptions to the "use package name" rule:
-
-* **changelog**: used for updating the release notes in CHANGELOG.md
-* none/empty string: useful for `style`, `test` and `refactor` changes that are done across all packages (e.g. `style: add missing semicolons`)
-
-## Subject
-The subject contains a succinct description of the change:
-
-* use the imperative, present tense: "change" not "changed" nor "changes"
-* don't capitalize the first letter
-* no dot (.) at the end
-
-## Body
-Just as in the **subject**, use the imperative, present tense: "change" not "changed" nor "changes".
-The body should include the motivation for the change and contrast this with previous behavior.
-
-## Footer
-The footer should contain any information about **Breaking Changes**
-
-**Breaking Changes** should start with the word `BREAKING CHANGE:` with a space or two newlines. The rest of the commit message is then used for this.
 
 # Developer Certificate of Origin (DCO)
 

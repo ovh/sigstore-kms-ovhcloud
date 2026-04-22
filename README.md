@@ -8,6 +8,7 @@ for [OVHcloud KMS](https://help.ovhcloud.com/csm/en-ie-kms-quick-start?id=kb_art
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Related links](#related-links)
 
 ## Installation
 
@@ -95,3 +96,8 @@ cosign sign --key ovhcloud://<key_id> <my_image>@<image_digest>
 ```bash
 cosign verify --key ovhcloud://<key_id> <my_image>@<image_digest>
 ```
+
+## Related links
+
+* Contribute: https://github.com/ovh/sigstore-kms-ovhcloud/blob/master/CONTRIBUTING.md
+* Report bugs: https://github.com/ovh/sigstore-kms-ovhcloud/issues

@@ -1,0 +1,35 @@
+Licences:
+Apache-2.0
+BSD-3-Clause
+MIT
+MPL-2.0
+Unknown
+
+Packages:
+github.com/apapsch/go-jsonmerge/v2; MIT
+github.com/fsnotify/fsnotify; BSD-3-Clause
+github.com/go-viper/mapstructure/v2; MIT
+github.com/google/go-containerregistry/pkg/name; Apache-2.0
+github.com/google/uuid; BSD-3-Clause
+github.com/hashicorp/go-cleanhttp; MPL-2.0
+github.com/hashicorp/go-retryablehttp; MPL-2.0
+github.com/knadh/koanf/maps; MIT
+github.com/knadh/koanf/parsers/yaml; MIT
+github.com/knadh/koanf/providers/env/v2; MIT
+github.com/knadh/koanf/providers/file; MIT
+github.com/knadh/koanf/v2; MIT
+github.com/mitchellh/copystructure; MIT
+github.com/mitchellh/reflectwalk; MIT
+github.com/oapi-codegen/runtime; Apache-2.0
+github.com/opencontainers/go-digest; Apache-2.0
+github.com/ovh/okms-sdk-go; Apache-2.0
+github.com/secure-systems-lab/go-securesystemslib/encrypted; MIT
+github.com/sigstore/protobuf-specs/gen/pb-go/common/v1; Apache-2.0
+github.com/sigstore/sigstore/pkg; Apache-2.0
+github.com/ovh/sigstore-kms-ovhcloud; Unknown. See go/github.com/ovh/sigstore-kms-ovhcloud/LICENSE file
+go.yaml.in/yaml/v3; MIT
+golang.org/x/crypto; BSD-3-Clause
+golang.org/x/sys/unix; BSD-3-Clause
+golang.org/x/term; BSD-3-Clause
+google.golang.org/genproto/googleapis/api; Apache-2.0
+google.golang.org/protobuf; BSD-3-Clause

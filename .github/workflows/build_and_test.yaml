@@ -151,5 +151,5 @@ jobs:
           export KMS_RESTAPI_KEY="$PWD/key.pem"
           trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
           export PATH="$PATH:$(pwd)"
-          chmod +x scripts/run-e2e.sh
+          chmod +x sigstore-kms-ovhcloud scripts/run-e2e.sh
           ./scripts/run-e2e.sh

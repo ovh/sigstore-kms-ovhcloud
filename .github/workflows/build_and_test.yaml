@@ -123,10 +123,14 @@ jobs:
           name: sigstore-kms-ovhcloud
           path: .
 
+      - name: Get cosign version
+        id: cosign-version
+        run: echo "version=$(cat .github/cosign-version | tr -d "[:space:]")" >> $GITHUB_OUTPUT
+
       - name: Install cosign
         uses: sigstore/cosign-installer@v4.1.1
         with:
-          cosign-release: 'v3.0.6'
+          cosign-release: ${{ steps.cosign-version.outputs.version }}
 
       - name: Setup credentials
         run: |-

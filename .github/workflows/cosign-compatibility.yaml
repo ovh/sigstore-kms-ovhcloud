@@ -1,0 +1,212 @@
+name: cosign-compatibility
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check-cosign-version:
+    runs-on: ubuntu-latest
+    outputs:
+      current_version: ${{ steps.compare.outputs.current_version }}
+      latest_version: ${{ steps.compare.outputs.latest_version }}
+      needs_update: ${{ steps.compare.outputs.needs_update }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get latest cosign release and compare with the current
+        id: compare
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          CURRENT=$(cat .github/cosign-version | tr -d "[:space:]")
+          LATEST=$(gh release view --repo sigstore/cosign --json tagName --jq ".tagName")
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "Failed to fetch latest cosign version"
+            exit 1
+          fi
+          echo "current_version=$CURRENT" >> $GITHUB_OUTPUT
+          echo "latest_version=$LATEST" >> $GITHUB_OUTPUT
+          if [ "$CURRENT" != "$LATEST" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "New cosign version detected: $LATEST"
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+            echo "Already on latest cosign version: $CURRENT"
+          fi
+
+  build-application:
+    runs-on: ubuntu-latest
+    needs:
+      - check-cosign-version
+    if: needs.check-cosign-version.outputs.needs_update == 'true'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Build
+        run: make build
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: sigstore-kms-ovhcloud
+          path: build/sigstore-kms-ovhcloud
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs:
+      - build-application
+    if: needs.check-cosign-version.outputs.needs_update == 'true'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Setup credentials
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          cat > $PWD/cert.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_CERT }}
+          EOF
+          cat > $PWD/key.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_KEY }}
+          EOF
+          chmod 600 $PWD/cert.pem $PWD/key.pem
+
+      - name: Run integration tests
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          export KMS_INTEGRATION_KEY_ID="${{ secrets.KMS_INTEGRATION_KEY_ID }}"
+          export KMS_RESTAPI_ENDPOINT="${{ secrets.KMS_RESTAPI_ENDPOINT }}"
+          export KMS_RESTAPI_OKMSID="${{ secrets.KMS_RESTAPI_OKMSID }}"
+          export KMS_RESTAPI_CERT="$PWD/cert.pem"
+          export KMS_RESTAPI_KEY="$PWD/key.pem"
+          trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
+          make integration-test
+
+      - name: Upload junit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-junit
+          path: build/integration-junit.xml
+
+      - name: Upload coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-coverage.html
+          path: build/integration-coverage.html
+
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-coverage-out
+          path: build/integration-coverage.out
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-test-results
+          path: build/integration-test-results.json
+
+  e2e-test:
+    runs-on: ubuntu-latest
+    needs:
+      - integration-test
+      - check-cosign-version
+    if: needs.check-cosign-version.outputs.needs_update == 'true'
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download sigstore-kms-ovhcloud artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: sigstore-kms-ovhcloud
+          path: .
+
+      - name: Get cosign version
+        id: cosign-version
+        run: echo "version=$(cat .github/cosign-version | tr -d "[:space:]")" >> $GITHUB_OUTPUT
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.1
+        with:
+          cosign-release: ${{ steps.cosign-version.outputs.version }}
+
+      - name: Setup credentials
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          cat > $PWD/cert.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_CERT }}
+          EOF
+          cat > $PWD/key.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_KEY }}
+          EOF
+          chmod 600 $PWD/cert.pem $PWD/key.pem
+
+      - name: Run e2e tests
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          export KMS_INTEGRATION_KEY_ID="${{ secrets.KMS_INTEGRATION_KEY_ID }}"
+          export KMS_RESTAPI_ENDPOINT="${{ secrets.KMS_RESTAPI_ENDPOINT }}"
+          export KMS_RESTAPI_OKMSID="${{ secrets.KMS_RESTAPI_OKMSID }}"
+          export KMS_RESTAPI_CERT="$PWD/cert.pem"
+          export KMS_RESTAPI_KEY="$PWD/key.pem"
+          trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
+          export PATH="$PATH:$(pwd)"
+          chmod +x sigstore-kms-ovhcloud scripts/run-e2e.sh
+          ./scripts/run-e2e.sh
+
+  update-cosign-version:
+    runs-on: ubuntu-latest
+    needs:
+      - e2e-test
+      - check-cosign-version
+    if: |
+      needs.check-cosign-version.outputs.needs_update == 'true' &&
+      needs.integration-test.result == 'success' &&
+      needs.e2e-test.result == 'success'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Update cosign version file and README badge
+        run: |
+          CURRENT="${{ needs.check-cosign-version.outputs.current_version }}"
+          LATEST="${{ needs.check-cosign-version.outputs.latest_version }}"
+          echo "$LATEST" > .github/cosign-version
+          sed -i "s|cosign%20compatibility-${CURRENT}-|cosign%20compatibility-${LATEST}-|g; s|cosign/releases/tag/${CURRENT}|cosign/releases/tag/${LATEST}|g" README.md
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update cosign version from ${{ needs.check-cosign-version.outputs.current_version }} to ${{ needs.check-cosign-version.outputs.latest_version }}"
+          title: "chore: update cosign version from ${{ needs.check-cosign-version.outputs.current_version }} to ${{ needs.check-cosign-version.outputs.latest_version }}"
+          body: |
+            ## Automated cosign version update
+            
+            **Previous version**: `${{ needs.check-cosign-version.outputs.current_version }}`
+            **New version**: `${{ needs.check-cosign-version.outputs.latest_version }}`
+            
+            All integration and e2e tests passed with new version.
+          branch: chore/cosign-update-${{ needs.check-cosign-version.outputs.latest_version }}
+          reviewers: ovh/kms

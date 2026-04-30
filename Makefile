@@ -1,0 +1,57 @@
+.PHONY: build clean install integration-test lint re test tool
+
+BINARY	=	sigstore-kms-ovhcloud
+BIN_DIR	=	$(CURDIR)/bin
+BUILD_DIR = $(CURDIR)/build
+
+CMD_PATH	=	./cmd/sigstore-kms-ovhcloud
+
+GO	=	go
+GOLANGCI_LINT = $(BIN_DIR)/golangci-lint
+GOTESTSUM = $(BIN_DIR)/gotestsum
+
+SRC	=	./...
+
+PREFIX	?=	/usr/local
+
+build:
+	@echo " > Building $(BINARY)..."
+	@$(GO) build -o $(BUILD_DIR)/$(BINARY) $(CMD_PATH) \
+		&& echo "Build succeeded: $(BUILD_DIR)/$(BINARY)\n" \
+		|| echo "Build failed\n"
+
+clean:
+	@echo " > Cleaning..."
+	@rm -rf $(BUILD_DIR)
+
+install: build
+	@echo " > Installing $(BINARY) to $(PREFIX)/bin..."
+	@mkdir -p $(PREFIX)/bin
+	@cp $(BUILD_DIR)/$(BINARY) $(PREFIX)/bin \
+		&& echo "Done. $(BINARY) is installed in $(PREFIX)/bin" \
+		|| echo "Try: sudo make install\n or change the installation path: make install PREFIX=<PREFIX>"
+
+integration-test: tool
+	@echo " > Running integration tests..."
+	@mkdir -p $(BUILD_DIR)
+	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/integration-coverage.out --tags=integration ./... > $(BUILD_DIR)/integration-test-results.json
+	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/integration-junit.xml --raw-command -- cat $(BUILD_DIR)/integration-test-results.json
+	$(GO) tool cover -html=$(BUILD_DIR)/integration-coverage.out -o $(BUILD_DIR)/integration-coverage.html
+
+lint: tool
+	@echo " > Linting code..."
+	@$(GOLANGCI_LINT) run
+
+re: clean build
+
+test: tool
+	@echo " > Running tests..."
+	@mkdir -p $(BUILD_DIR)
+	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/coverage.out ./... > $(BUILD_DIR)/test-results.json
+	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/junit.xml --raw-command -- cat $(BUILD_DIR)/test-results.json
+	$(GO) tool cover -html=$(BUILD_DIR)/coverage.out -o $(BUILD_DIR)/coverage.html
+
+tool:
+	@echo " > Installing tools..."
+	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.3
+	GOBIN=$(BIN_DIR) go install gotest.tools/gotestsum@v1.13.0

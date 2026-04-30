@@ -1,0 +1,12 @@
+version: 1
+profile: default # Name of the active profile
+profiles:
+  default:
+    restapi:
+      endpoint: https://myserver.acme.com
+      ca: /path/to/public-ca.crt # Optional if the CA is in system store
+      auth:
+        type: token
+        okmsId: okms_id
+        token: token
+

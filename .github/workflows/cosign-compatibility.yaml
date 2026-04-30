@@ -30,7 +30,7 @@ jobs:
           echo "latest_version=$LATEST" >> $GITHUB_OUTPUT
           if [ "$CURRENT" != "$LATEST" ]; then
             echo "needs_update=true" >> $GITHUB_OUTPUT
-            echo "New cosign version detected: $LATEST
+            echo "New cosign version detected: $LATEST"
           else
             echo "needs_update=false" >> $GITHUB_OUTPUT
             echo "Already on latest cosign version: $CURRENT"
@@ -190,12 +190,12 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.new_version }}"
-          title: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.new_version }}"
+          commit-message: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.latest_version }}"
+          title: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.latest_version }}"
           body: |
             ## Automated cosign version update
             
             **Previous version**: `${{ needs.check-cosign-version.outputs.current_version }}`
-            **New version**: `${{ needs.check-cosign-version.outputs.new_version }}`
+            **New version**: `${{ needs.check-cosign-version.outputs.latest_version }}`
             
             All integration and e2e tests passed with new version.

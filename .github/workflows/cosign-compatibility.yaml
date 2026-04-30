@@ -45,7 +45,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.25"
 
@@ -53,7 +53,7 @@ jobs:
         run: make build
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sigstore-kms-ovhcloud
           path: build/sigstore-kms-ovhcloud
@@ -67,7 +67,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.25"
 
@@ -97,28 +97,28 @@ jobs:
 
       - name: Upload junit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-junit
           path: build/integration-junit.xml
 
       - name: Upload coverage HTML
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-coverage.html
           path: build/integration-coverage.html
 
       - name: Upload coverage data
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-coverage-out
           path: build/integration-coverage.out
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-results
           path: build/integration-test-results.json
@@ -133,7 +133,7 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download sigstore-kms-ovhcloud artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: sigstore-kms-ovhcloud
           path: .
@@ -188,16 +188,19 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Update cosign version file
+      - name: Update cosign version file and README badge
         run: |
-          echo "${{ needs.check-cosign-version.outputs.latest_version }}" > .github/cosign-version
+          CURRENT="${{ needs.check-cosign-version.outputs.current_version }}"
+          LATEST="${{ needs.check-cosign-version.outputs.latest_version }}"
+          echo "$LATEST" > .github/cosign-version
+          sed -i "s|cosign%20compatibility-${CURRENT}-|cosign%20compatibility-${LATEST}-|g; s|cosign/releases/tag/${CURRENT}|cosign/releases/tag/${LATEST}|g" README.md
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.latest_version }}"
-          title: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.latest_version }}"
+          commit-message: "chore: update cosign version from ${{ needs.check-cosign-version.outputs.current_version }} to ${{ needs.check-cosign-version.outputs.latest_version }}"
+          title: "chore: update cosign version from ${{ needs.check-cosign-version.outputs.current_version }} to ${{ needs.check-cosign-version.outputs.latest_version }}"
           body: |
             ## Automated cosign version update
             

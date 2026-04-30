@@ -1,9 +1,9 @@
 name: cosign-compatibility
 
-on:
-  schedule:
-    - cron: "0 8 * * 1"
-  workflow_dispatch:
+on: [ push ]
+#  schedule:
+#    - cron: "0 8 * * 1"
+#  workflow_dispatch:
 
 jobs:
   check-cosign-version:

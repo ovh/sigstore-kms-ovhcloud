@@ -1,5 +1,6 @@
 # sigstore-kms-ovhcloud
 
+[![build-and-test](https://github.com/ovh/sigstore-kms-ovhcloud/actions/workflows/build_and_test.yaml/badge.svg)](https://github.com/ovh/sigstore-kms-ovhcloud/actions/workflows/build_and_test.yaml)
 [![Cosign Compatibility](https://img.shields.io/badge/cosign%20compatibility-v3.0.6-blue?logo=linux-foundation)](https://github.com/sigstore/cosign/releases/tag/v3.0.6)
 
 [Sigstore](https://sigstore.dev) KMS plugin

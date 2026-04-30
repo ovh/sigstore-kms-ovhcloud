@@ -199,3 +199,5 @@ jobs:
             **New version**: `${{ needs.check-cosign-version.outputs.latest_version }}`
             
             All integration and e2e tests passed with new version.
+          branch: chore/cosign-update-${{ needs.check-cosign-version.outputs.latest_version }}
+          reviewers: ovh/kms

@@ -6,7 +6,7 @@ jobs:
   lint-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -15,10 +15,10 @@ jobs:
   golangci-lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.25"
 
@@ -30,10 +30,10 @@ jobs:
     needs:
       - golangci-lint
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.25"
 
@@ -41,7 +41,7 @@ jobs:
         run: make build
 
       - name: Upload binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sigstore-kms-ovhcloud
           path: build/sigstore-kms-ovhcloud
@@ -51,10 +51,10 @@ jobs:
     needs:
       - build-application
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: "1.25"
 
@@ -84,28 +84,28 @@ jobs:
 
       - name: Upload junit report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-junit
           path: build/integration-junit.xml
 
       - name: Upload coverage HTML
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-coverage.html
           path: build/integration-coverage.html
 
       - name: Upload coverage data
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-coverage-out
           path: build/integration-coverage.out
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-test-results
           path: build/integration-test-results.json
@@ -115,10 +115,10 @@ jobs:
     needs:
       - integration-test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Download sigstore-kms-ovhcloud artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: sigstore-kms-ovhcloud
           path: .

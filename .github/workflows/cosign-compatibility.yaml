@@ -186,8 +186,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Update cosign version
-        uses: peter-evans/create-pull-request@v7
+      - name: Update cosign version file
+        run: |
+          echo "${{ needs.check-cosign-version.outputs.latest_version }}" > .github/cosign-version
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.latest_version }}"

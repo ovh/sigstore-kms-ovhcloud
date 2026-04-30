@@ -1,0 +1,36 @@
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: sigstore-kms-ovhcloud
+    main: ./cmd/sigstore-kms-ovhcloud
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    binary: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
+
+archives:
+  - formats: [ 'zip' ]
+
+checksum:
+  name_template: "{{ .ProjectName }}_checksums.txt"
+
+release:
+  github:
+    owner: ovh
+    name: sigstore-kms-ovhcloud
+
+  footer: |
+
+    ---
+
+    Released by [GoReleaser](https://github.com/goreleaser/goreleaser)

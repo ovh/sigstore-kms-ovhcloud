@@ -1,0 +1,159 @@
+name: build-and-test
+
+on: [ push ]
+
+jobs:
+  lint-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/lint-commit
+
+  golangci-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Run lint
+        run: make lint
+
+  build-application:
+    runs-on: ubuntu-latest
+    needs:
+      - golangci-lint
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Build
+        run: make build
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: sigstore-kms-ovhcloud
+          path: build/sigstore-kms-ovhcloud
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs:
+      - build-application
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Setup credentials
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          cat > $PWD/cert.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_CERT }}
+          EOF
+          cat > $PWD/key.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_KEY }}
+          EOF
+          chmod 600 $PWD/cert.pem $PWD/key.pem
+
+      - name: Run integration tests
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          export KMS_INTEGRATION_KEY_ID="${{ secrets.KMS_INTEGRATION_KEY_ID }}"
+          export KMS_RESTAPI_ENDPOINT="${{ secrets.KMS_RESTAPI_ENDPOINT }}"
+          export KMS_RESTAPI_OKMSID="${{ secrets.KMS_RESTAPI_OKMSID }}"
+          export KMS_RESTAPI_CERT="$PWD/cert.pem"
+          export KMS_RESTAPI_KEY="$PWD/key.pem"
+          trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
+          make integration-test
+
+      - name: Upload junit report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-junit
+          path: build/integration-junit.xml
+
+      - name: Upload coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-coverage.html
+          path: build/integration-coverage.html
+
+      - name: Upload coverage data
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-coverage-out
+          path: build/integration-coverage.out
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: integration-test-results
+          path: build/integration-test-results.json
+
+  e2e-test:
+    runs-on: ubuntu-latest
+    needs:
+      - integration-test
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download sigstore-kms-ovhcloud artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: sigstore-kms-ovhcloud
+          path: .
+
+      - name: Get cosign version
+        id: cosign-version
+        run: echo "version=$(cat .github/cosign-version | tr -d "[:space:]")" >> $GITHUB_OUTPUT
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v4.1.1
+        with:
+          cosign-release: ${{ steps.cosign-version.outputs.version }}
+
+      - name: Setup credentials
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          cat > $PWD/cert.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_CERT }}
+          EOF
+          cat > $PWD/key.pem <<EOF
+          ${{ secrets.KMS_RESTAPI_KEY }}
+          EOF
+          chmod 600 $PWD/cert.pem $PWD/key.pem
+
+      - name: Run e2e tests
+        run: |-
+          #!/bin/bash
+          set -euo pipefail
+          export KMS_INTEGRATION_KEY_ID="${{ secrets.KMS_INTEGRATION_KEY_ID }}"
+          export KMS_RESTAPI_ENDPOINT="${{ secrets.KMS_RESTAPI_ENDPOINT }}"
+          export KMS_RESTAPI_OKMSID="${{ secrets.KMS_RESTAPI_OKMSID }}"
+          export KMS_RESTAPI_CERT="$PWD/cert.pem"
+          export KMS_RESTAPI_KEY="$PWD/key.pem"
+          trap 'rm -f $PWD/cert.pem $PWD/key.pem' EXIT
+          export PATH="$PATH:$(pwd)"
+          chmod +x sigstore-kms-ovhcloud scripts/run-e2e.sh
+          ./scripts/run-e2e.sh

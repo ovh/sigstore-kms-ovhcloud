@@ -190,8 +190,8 @@ jobs:
         uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "chore: update cosign version to ${{ check-cosign-version.outputs.new_version }}"
-          title: "chore: update cosign version to ${{ check-cosign-version.outputs.new_version }}"
+          commit-message: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.new_version }}"
+          title: "chore: update cosign version to ${{ needs.check-cosign-version.outputs.new_version }}"
           body: |
             ## Automated cosign version update
             

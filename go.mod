@@ -1,4 +1,4 @@
-module sigstore-kms-ovhcloud
+module github.com/ovh/sigstore-kms-ovhcloud
 
 go 1.25.8
 

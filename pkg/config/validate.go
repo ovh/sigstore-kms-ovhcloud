@@ -7,7 +7,8 @@ package config
 import (
 	"errors"
 	"fmt"
-	"sigstore-kms-ovhcloud/pkg/utils"
+
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/utils"
 )
 
 type validator func(*Config) error

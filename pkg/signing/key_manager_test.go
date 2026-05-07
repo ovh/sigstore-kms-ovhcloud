@@ -14,7 +14,7 @@ import (
 	"errors"
 	"testing"
 
-	"sigstore-kms-ovhcloud/pkg/utils"
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/utils"
 
 	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go"

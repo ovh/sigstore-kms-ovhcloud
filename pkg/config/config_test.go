@@ -7,8 +7,9 @@ package config
 import (
 	"os"
 	"path/filepath"
-	"sigstore-kms-ovhcloud/pkg/testutils"
 	"testing"
+
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/testutils"
 
 	"github.com/knadh/koanf/v2"
 	"github.com/stretchr/testify/assert"

@@ -9,6 +9,9 @@ for [OVHcloud KMS](https://help.ovhcloud.com/csm/en-ie-kms-quick-start?id=kb_art
 ## Table of Contents
 
 - [Installation](#installation)
+  - [Installation command](#installation-command)
+  - [Binary download](#binary-download)
+  - [Install from the source](#install-from-the-source)
 - [Configuration](#configuration)
 - [Usage](#usage)
 - [Related links](#related-links)
@@ -17,13 +20,52 @@ for [OVHcloud KMS](https://help.ovhcloud.com/csm/en-ie-kms-quick-start?id=kb_art
 
 To permit sigstore to use the plugin, the binary must be in your system's PATH.<br>
 
-To build and install the plugin, you can use this command:
+### Installation command
 
-```bash
-make install PREFIX=<PREFIX>
+```sh
+curl -fsSL https://raw.githubusercontent.com/ovh/sigstore-kms-ovhcloud/main/install.sh | sh
 ```
 
-By default, `PREFIX` is set to `/usr/local`, so the binary will be located in `/usr/local/bin/sigstore-kms-ovhcloud`.
+The binary is installed in `$HOME/.local/bin` by default (created if it does not exist).
+Make sure this directory is in your `PATH`.
+
+**Install a specific version**:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ovh/sigstore-kms-ovhcloud/main/install.sh | sh -s <version>
+```
+
+**Custom installation directory**:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ovh/sigstore-kms-ovhcloud/main/install.sh | sh -s -- -b <path>
+```
+
+### Binary download
+
+1. Download [latest release](https://github.com/ovh/sigstore-kms-ovhcloud/releases/latest)
+2. Untar / unzip the archive
+3. Add the containing folder to your `PATH` environment variable, or move the binary into a directory that is already in your `PATH`
+
+### Install from the source
+
+Requires Go to be installed on your system.
+
+**Using `go install`**:
+
+```sh
+go install github.com/ovh/sigstore-kms-ovhcloud/cmd/sigstore-kms-ovhcloud@latest
+```
+
+**Using `make`**:
+
+```sh
+git clone https://github.com/ovh/sigstore-kms-ovhcloud.git
+cd sigstore-kms-ovhcloud
+make install # installs to /usr/local/bin by default
+# or:
+make install PREFIX=$HOME/.local # installs to $HOME/.local/bin
+```
 
 ## Configuration
 

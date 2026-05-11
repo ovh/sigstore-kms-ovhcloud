@@ -88,7 +88,7 @@ profile: default # Name of the active profile
 profiles:
   default:
     restapi:
-      endpoint: https://myserver.acme.com
+      endpoint: <kms-endpoint> # for example: "https://eu-west-rbx.okms.ovh.net"
       ca: /path/to/public-ca.crt # Optional if the CA is in system store
       auth:
         cert: /path/to/domain/cert.pem
@@ -112,12 +112,12 @@ profile: default # Name of the active profile
 profiles:
   default:
     restapi:
-      endpoint: https://myserver.acme.com
+      endpoint: <kms-endpoint> # for example: "https://eu-west-rbx.okms.ovh.net"
       ca: /path/to/public-ca.crt # Optional if the CA is in system store
       auth:
         type: token
-        token: token
-        okmsId: okms_id
+        token: <token>
+        okmsId: <okms-id> # for example: "734b9b45-8b1a-469c-b140-b10bd6540017"
 ```
 
 These settings can be overwritten using environment variables:

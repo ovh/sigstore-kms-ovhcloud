@@ -13,6 +13,8 @@ for [OVHcloud KMS](https://help.ovhcloud.com/csm/en-ie-kms-quick-start?id=kb_art
   - [Binary download](#binary-download)
   - [Install from the source](#install-from-the-source)
 - [Configuration](#configuration)
+  - [mTLS authentication](#mtls-authentication)
+  - [Token authentication](#token-authentication)
 - [Usage](#usage)
 - [Related links](#related-links)
 
@@ -69,12 +71,16 @@ make install PREFIX=$HOME/.local # installs to $HOME/.local/bin
 
 ## Configuration
 
+**OVH provider supports both `mTLS` and `token` authentication.**
+
 Default settings can be set using a configuration file named `okms.yaml` and located in the `${HOME}/.ovh-kms`
 directory.
 If you don't wish to use this default file, you can create your own and specify the full path in the `KMS_CONFIG`
 environment variable.
 
-Example for `okms.yaml`:
+### mTLS authentication
+
+Example of `okms.yaml`:
 
 ```yaml
 version: 1
@@ -85,11 +91,26 @@ profiles:
       endpoint: https://myserver.acme.com
       ca: /path/to/public-ca.crt # Optional if the CA is in system store
       auth:
-        type: mtls # Optional, default to "mtls"
         cert: /path/to/domain/cert.pem
         key: /path/to/domain/key.pem
+```
 
-  token-profile:
+These settings can be overwritten using environment variables:
+
+- `KMS_RESTAPI_ENDPOINT`
+- `KMS_RESTAPI_CA`
+- `KMS_RESTAPI_CERT`
+- `KMS_RESTAPI_KEY`
+
+### Token authentication
+
+Example of `okms.yaml`:
+
+```yaml
+version: 1
+profile: default # Name of the active profile
+profiles:
+  default:
     restapi:
       endpoint: https://myserver.acme.com
       ca: /path/to/public-ca.crt # Optional if the CA is in system store
@@ -104,8 +125,6 @@ These settings can be overwritten using environment variables:
 - `KMS_RESTAPI_ENDPOINT`
 - `KMS_RESTAPI_CA`
 - `KMS_RESTAPI_TYPE`
-- `KMS_RESTAPI_CERT`
-- `KMS_RESTAPI_KEY`
 - `KMS_RESTAPI_OKMSID`
 - `KMS_RESTAPI_TOKEN`
 

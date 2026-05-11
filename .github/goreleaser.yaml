@@ -19,7 +19,10 @@ builds:
     binary: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}-{{ .Version }}"
 
 archives:
-  - formats: [ 'zip' ]
+  - formats: [ 'tar.gz' ]
+    format_overrides:
+      - goos: windows
+        formats: [ 'zip' ]
 
 checksum:
   name_template: "{{ .ProjectName }}_checksums.txt"
@@ -28,6 +31,9 @@ release:
   github:
     owner: ovh
     name: sigstore-kms-ovhcloud
+
+  extra_files:
+    - glob: install.sh
 
   footer: |
 

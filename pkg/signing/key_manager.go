@@ -11,8 +11,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"sigstore-kms-ovhcloud/pkg/config"
-	"sigstore-kms-ovhcloud/pkg/utils"
+
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/config"
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/utils"
 
 	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go"

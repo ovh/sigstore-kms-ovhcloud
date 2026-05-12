@@ -6,8 +6,9 @@ package utils
 
 import (
 	"path/filepath"
-	"sigstore-kms-ovhcloud/pkg/testutils"
 	"testing"
+
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/testutils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

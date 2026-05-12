@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"sigstore-kms-ovhcloud/pkg/config"
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/config"
 
 	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go"

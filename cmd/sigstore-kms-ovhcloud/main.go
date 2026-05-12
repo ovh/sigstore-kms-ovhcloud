@@ -7,8 +7,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"sigstore-kms-ovhcloud/pkg/config"
-	"sigstore-kms-ovhcloud/pkg/signing"
+
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/config"
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/signing"
 
 	"github.com/sigstore/sigstore/pkg/signature/kms/cliplugin/handler"
 )

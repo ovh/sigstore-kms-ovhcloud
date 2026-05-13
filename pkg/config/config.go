@@ -91,14 +91,14 @@ func resolveProfile(k *koanf.Koanf) string {
 func unmarshalConfig(k *koanf.Koanf, profile string) (*Config, error) {
 	var cfg Config
 
-	path := strings.Join([]string{"profiles", profile, "restapi"}, ".")
-	if err := k.Unmarshal(path, &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal config: %w", err)
+	restPath := strings.Join([]string{"profiles", profile, "restapi"}, ".")
+	if err := k.Unmarshal(restPath, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal rest config: %w", err)
 	}
 
 	pluginPath := strings.Join([]string{"profiles", profile, "sigstore-kms-ovhcloud"}, ".")
 	if err := k.Unmarshal(pluginPath, &cfg.PluginConfig); err != nil {
-		return nil, fmt.Errorf("unmarshal config: %w", err)
+		return nil, fmt.Errorf("unmarshal plugin config: %w", err)
 	}
 
 	return &cfg, nil

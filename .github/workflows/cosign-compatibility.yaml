@@ -143,7 +143,7 @@ jobs:
         run: echo "version=$(cat .github/cosign-version | tr -d "[:space:]")" >> $GITHUB_OUTPUT
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v4.1.1
+        uses: sigstore/cosign-installer@v4.1.2
         with:
           cosign-release: ${{ steps.cosign-version.outputs.version }}
 

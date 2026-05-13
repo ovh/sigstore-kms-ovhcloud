@@ -17,38 +17,6 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
-type ConflictStrategy string
-
-const (
-	ConflictStrategyError         ConflictStrategy = "error"
-	ConflictStrategyUseMoreRecent ConflictStrategy = "use-more-recent"
-)
-
-type Config struct {
-	Endpoint     string     `koanf:"endpoint"`
-	CA           string     `koanf:"ca"`
-	Auth         AuthConfig `koanf:"auth"`
-	PluginConfig PluginConfig
-	TlsConfig    *tls.Config
-}
-
-type AuthConfig struct {
-	Type   string `koanf:"type"`
-	Cert   string `koanf:"cert"`
-	Key    string `koanf:"key"`
-	OkmsID string `koanf:"okmsId"`
-	Token  string `koanf:"token"`
-}
-
-type PluginConfig struct {
-	OnKeyConflict OnKeyConflictConfig `koanf:"on-key-conflict"`
-}
-
-type OnKeyConflictConfig struct {
-	Strategy     ConflictStrategy `koanf:"strategy"`
-	MaxKeysToTry int              `koanf:"max-keys-to-try"`
-}
-
 const (
 	envPrefix         = "KMS_"
 	defaultProfile    = "default"
@@ -84,6 +52,7 @@ func NewConfig() (*Config, error) {
 	cfg.TlsConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
+	applyDefaultConfig(cfg)
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -131,5 +100,19 @@ func unmarshalConfig(k *koanf.Koanf, profile string) (*Config, error) {
 	if err := k.Unmarshal(pluginPath, &cfg.PluginConfig); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
+
 	return &cfg, nil
+}
+
+func applyDefaultConfig(cfg *Config) {
+	if cfg.Auth.Type == "" {
+		cfg.Auth.Type = "mtls"
+	}
+
+	if cfg.PluginConfig.OnKeyConflict.Strategy == "" {
+		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyError
+	}
+	if cfg.PluginConfig.OnKeyConflict.Strategy == ConflictStrategyUseMoreRecent && cfg.PluginConfig.OnKeyConflict.MaxKeysToTry == 0 {
+		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = 1
+	}
 }

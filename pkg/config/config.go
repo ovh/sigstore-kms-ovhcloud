@@ -17,11 +17,19 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
+type ConflictStrategy string
+
+const (
+	ConflictStrategyError         ConflictStrategy = "error"
+	ConflictStrategyUseMoreRecent ConflictStrategy = "use-more-recent"
+)
+
 type Config struct {
-	Endpoint  string     `koanf:"endpoint"`
-	CA        string     `koanf:"ca"`
-	Auth      AuthConfig `koanf:"auth"`
-	TlsConfig *tls.Config
+	Endpoint     string     `koanf:"endpoint"`
+	CA           string     `koanf:"ca"`
+	Auth         AuthConfig `koanf:"auth"`
+	PluginConfig PluginConfig
+	TlsConfig    *tls.Config
 }
 
 type AuthConfig struct {
@@ -30,6 +38,15 @@ type AuthConfig struct {
 	Key    string `koanf:"key"`
 	OkmsID string `koanf:"okmsId"`
 	Token  string `koanf:"token"`
+}
+
+type PluginConfig struct {
+	OnKeyConflict OnKeyConflictConfig `koanf:"on-key-conflict"`
+}
+
+type OnKeyConflictConfig struct {
+	Strategy     ConflictStrategy `koanf:"strategy"`
+	MaxKeysToTry int              `koanf:"max-keys-to-try"`
 }
 
 const (
@@ -107,6 +124,11 @@ func unmarshalConfig(k *koanf.Koanf, profile string) (*Config, error) {
 
 	path := strings.Join([]string{"profiles", profile, "restapi"}, ".")
 	if err := k.Unmarshal(path, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal config: %w", err)
+	}
+
+	pluginPath := strings.Join([]string{"profiles", profile, "sigstore-kms-ovhcloud"}, ".")
+	if err := k.Unmarshal(pluginPath, &cfg.PluginConfig); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
 	return &cfg, nil

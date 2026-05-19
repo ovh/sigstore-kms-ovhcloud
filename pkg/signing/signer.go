@@ -120,11 +120,11 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 		}
 	}
 
-	keyID, err := uuid.Parse(o.keyResourceID)
+	ids, err := o.resolveKeyIDs(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid key id: %w", err)
+		return nil, err
 	}
-	publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
+	publicKey, err := o.keyManager.GetPublicKey(ctx, ids[0])
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 		return nil, err
 	}
 
-	return o.keyManager.Sign(ctx, keyID, digest, algorithm)
+	return o.keyManager.Sign(ctx, ids[0], digest, algorithm)
 }
 
 // VerifySignature verifies a digital signature.
@@ -159,11 +159,11 @@ func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...sig
 		}
 	}
 
-	keyID, err := uuid.Parse(o.keyResourceID)
+	ids, err := o.resolveKeyIDs(ctx)
 	if err != nil {
 		return fmt.Errorf("invalid key id: %w", err)
 	}
-	publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
+	publicKey, err := o.keyManager.GetPublicKey(ctx, ids[0])
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...sig
 		return fmt.Errorf("reading signature: %w", err)
 	}
 
-	return o.keyManager.Verify(ctx, keyID, digest, algorithm, sigBytes)
+	return o.keyManager.Verify(ctx, ids[0], digest, algorithm, sigBytes)
 }
 
 // determineAlgorithm determines the digital signature algorithm to use based on the public key type, hash function, and signer options.

@@ -5,7 +5,6 @@
 package config
 
 import (
-	"crypto/tls"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,12 +164,8 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestValidatePluginConfig(t *testing.T) {
-	getEmptyConfig := func() *Config {
-		return &Config{TlsConfig: &tls.Config{}}
-	}
-
 	t.Run("use-more-recent strategy valid", func(t *testing.T) {
-		cfg := getEmptyConfig()
+		cfg := &Config{}
 		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyUseMoreRecent
 		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = 2
 		require.NoError(t, validatePluginConfig(cfg))
@@ -179,7 +174,7 @@ func TestValidatePluginConfig(t *testing.T) {
 	})
 
 	t.Run("use-more-recent strategy try all keys valid", func(t *testing.T) {
-		cfg := getEmptyConfig()
+		cfg := &Config{}
 		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyUseMoreRecent
 		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = -1
 		require.NoError(t, validatePluginConfig(cfg))
@@ -188,13 +183,13 @@ func TestValidatePluginConfig(t *testing.T) {
 	})
 
 	t.Run("use-more-recent strategy invalid", func(t *testing.T) {
-		cfg := getEmptyConfig()
+		cfg := &Config{}
 		cfg.PluginConfig.OnKeyConflict.Strategy = "invalid"
 		require.Error(t, validatePluginConfig(cfg))
 	})
 
 	t.Run("use-more-recent strategy max-keys-try invalid", func(t *testing.T) {
-		cfg := getEmptyConfig()
+		cfg := &Config{}
 		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyUseMoreRecent
 		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = -2
 		require.Error(t, validatePluginConfig(cfg))

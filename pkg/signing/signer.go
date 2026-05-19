@@ -122,7 +122,7 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 
 	ids, err := o.resolveKeyIDs(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid key id: %w", err)
 	}
 	publicKey, err := o.keyManager.GetPublicKey(ctx, ids[0])
 	if err != nil {

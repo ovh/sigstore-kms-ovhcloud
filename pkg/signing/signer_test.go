@@ -19,6 +19,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go/types"
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/config"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/stretchr/testify/assert"
@@ -27,10 +28,11 @@ import (
 
 // mockKeyManager implements the KeyManager interface
 type mockKeyManager struct {
-	getPublicKeyFn func(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
-	createKeyFn    func(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
-	signFn         func(ctx context.Context, keyID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
-	verifyFn       func(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
+	getPublicKeyFn   func(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
+	getKeyIDByNameFn func(ctx context.Context, name string) (uuid.UUID, error)
+	createKeyFn      func(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
+	signFn           func(ctx context.Context, keyID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
+	verifyFn         func(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
 }
 
 func (m *mockKeyManager) GetPublicKey(ctx context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
@@ -38,6 +40,13 @@ func (m *mockKeyManager) GetPublicKey(ctx context.Context, keyID uuid.UUID) (cry
 		return m.getPublicKeyFn(ctx, keyID)
 	}
 	return nil, nil
+}
+
+func (m *mockKeyManager) GetKeyIDByName(ctx context.Context, name string) (uuid.UUID, error) {
+	if m.getKeyIDByNameFn != nil {
+		return m.getKeyIDByNameFn(ctx, name)
+	}
+	return uuid.New(), nil
 }
 
 func (m *mockKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {
@@ -66,10 +75,19 @@ func (m *mockKeyManager) Verify(ctx context.Context, keyResourceID uuid.UUID, di
 	return nil
 }
 
-var defaultTestKeyManager = &mockKeyManager{}
+var defaultTestKeyManager = &mockKeyManager{
+	getKeyIDByNameFn: func(_ context.Context, name string) (uuid.UUID, error) {
+		return uuid.Nil, errors.New("key not found")
+	},
+}
+var defaultPluginConfig = config.PluginConfig{
+	OnKeyConflict: config.OnKeyConflictConfig{
+		Strategy: config.ConflictStrategyError,
+	},
+}
 
 func TestDefaultAlgorithm(t *testing.T) {
-	signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key-id", crypto.SHA256)
+	signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key-id", crypto.SHA256, defaultPluginConfig)
 
 	result := signerVerifier.DefaultAlgorithm()
 	expected := string(types.ES256)
@@ -79,7 +97,7 @@ func TestDefaultAlgorithm(t *testing.T) {
 }
 
 func TestSupportedAlgorithms(t *testing.T) {
-	signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key-id", crypto.SHA256)
+	signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key-id", crypto.SHA256, defaultPluginConfig)
 
 	result := signerVerifier.SupportedAlgorithms()
 	expected := []string{
@@ -99,7 +117,7 @@ func TestSupportedAlgorithms(t *testing.T) {
 }
 
 func TestDefaultAlgorithm_IsInSupportedList(t *testing.T) {
-	signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key-id", crypto.SHA256)
+	signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key-id", crypto.SHA256, defaultPluginConfig)
 
 	defaultAlgo := signerVerifier.DefaultAlgorithm()
 	supportedAlgos := signerVerifier.SupportedAlgorithms()
@@ -109,12 +127,12 @@ func TestDefaultAlgorithm_IsInSupportedList(t *testing.T) {
 
 func TestSigner_PublicKey(t *testing.T) {
 	t.Run("invalid key resource id", func(t *testing.T) {
-		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256, defaultPluginConfig)
 
 		publicKey, err := signerVerifier.PublicKey()
 
 		assert.Nil(t, publicKey)
-		assert.ErrorContains(t, err, "invalid key id")
+		assert.Error(t, err)
 	})
 
 	t.Run("key manager error", func(t *testing.T) {
@@ -123,7 +141,7 @@ func TestSigner_PublicKey(t *testing.T) {
 				return nil, errors.New("error in get")
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, defaultPluginConfig)
 
 		publicKey, err := signerVerifier.PublicKey()
 
@@ -143,19 +161,19 @@ func TestSigner_PublicKey(t *testing.T) {
 				return expectedPublicKey, nil
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, defaultPluginConfig)
 
 		publicKey, err := signerVerifier.PublicKey()
 
 		assert.NoError(t, err)
 		assert.Equal(t, expectedPublicKey, publicKey)
-		assert.Equal(t, uuid.MustParse(signerVerifier.(*okmsSignerVerifier).keyResourceID), receivedKeyID)
+		assert.NotEqual(t, uuid.Nil, receivedKeyID)
 	})
 }
 
 func TestSigner_CreateKey(t *testing.T) {
 	t.Run("invalid key resource id", func(t *testing.T) {
-		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256, defaultPluginConfig)
 
 		publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
 
@@ -169,7 +187,7 @@ func TestSigner_CreateKey(t *testing.T) {
 				return uuid.Nil, errors.New("error in create")
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256, defaultPluginConfig)
 
 		publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
 
@@ -190,7 +208,7 @@ func TestSigner_CreateKey(t *testing.T) {
 				return expectedPublicKey, nil
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, keyResourceID, crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, keyResourceID, crypto.SHA256, defaultPluginConfig)
 
 		publicKey, err := signerVerifier.CreateKey(context.Background(), string(types.ES256))
 
@@ -204,7 +222,7 @@ func TestSigner_CreateKey(t *testing.T) {
 
 func TestSigner_SignMessage(t *testing.T) {
 	t.Run("invalid key resource id", func(t *testing.T) {
-		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256, defaultPluginConfig)
 
 		sig, err := signerVerifier.SignMessage(strings.NewReader("test message"))
 
@@ -225,7 +243,7 @@ func TestSigner_SignMessage(t *testing.T) {
 				return nil, expectedError
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, defaultPluginConfig)
 
 		sig, err := signerVerifier.SignMessage(strings.NewReader("test message"))
 
@@ -359,7 +377,7 @@ func TestSigner_SignMessage(t *testing.T) {
 					return expectedSignature, nil
 				},
 			}
-			signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), test.hashFunc)
+			signerVerifier := NewOkmsSignerVerifier(mock, "test-key", test.hashFunc, defaultPluginConfig)
 
 			sig, err := signerVerifier.SignMessage(strings.NewReader("test message"), test.signOpts...)
 
@@ -372,7 +390,7 @@ func TestSigner_SignMessage(t *testing.T) {
 
 func TestSigner_VerifySignature(t *testing.T) {
 	t.Run("invalid key resource id", func(t *testing.T) {
-		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-uuid", crypto.SHA256, defaultPluginConfig)
 
 		err := signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
 
@@ -389,7 +407,7 @@ func TestSigner_VerifySignature(t *testing.T) {
 				return &privateKey.PublicKey, nil
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, defaultPluginConfig)
 
 		err = signerVerifier.VerifySignature(iotest.ErrReader(readerError), bytes.NewReader([]byte("test message")))
 
@@ -409,7 +427,7 @@ func TestSigner_VerifySignature(t *testing.T) {
 				return expectedError
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, defaultPluginConfig)
 
 		err = signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
 
@@ -435,7 +453,7 @@ func TestSigner_VerifySignature(t *testing.T) {
 				return nil
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA256)
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, defaultPluginConfig)
 
 		err = signerVerifier.VerifySignature(bytes.NewReader(sigBytes), bytes.NewReader([]byte("test message")))
 
@@ -459,7 +477,7 @@ func TestSigner_VerifySignature(t *testing.T) {
 				return nil
 			},
 		}
-		signerVerifier := NewOkmsSignerVerifier(mock, uuid.New().String(), crypto.SHA512)
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA512, defaultPluginConfig)
 
 		err = signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
 

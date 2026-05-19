@@ -41,7 +41,7 @@ func main() {
 		panic(err)
 	}
 
-	signerVerifier := signing.NewOkmsSignerVerifier(km, pluginArgs.InitOptions.KeyResourceID, pluginArgs.InitOptions.HashFunc)
+	signerVerifier := signing.NewOkmsSignerVerifier(km, pluginArgs.InitOptions.KeyResourceID, pluginArgs.InitOptions.HashFunc, cfg.PluginConfig)
 	_, err = handler.Dispatch(os.Stdout, os.Stdin, pluginArgs, signerVerifier)
 	if err != nil {
 		// Dispatch() will have already called WriteResponse() with the error.

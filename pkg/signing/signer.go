@@ -15,6 +15,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ovh/okms-sdk-go/types"
+	"github.com/ovh/sigstore-kms-ovhcloud/pkg/config"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"github.com/sigstore/sigstore/pkg/signature/options"
@@ -44,14 +45,16 @@ type okmsSignerVerifier struct {
 	keyManager    KeyManager
 	keyResourceID string
 	hashFunc      crypto.Hash
+	pluginConfig  config.PluginConfig
 }
 
 // NewOkmsSignerVerifier returns an instance of okmsSignerVerifier which is an implementation of kms.SignerVerifier.
-func NewOkmsSignerVerifier(km KeyManager, keyResourceID string, hashFunc crypto.Hash) kms.SignerVerifier {
+func NewOkmsSignerVerifier(km KeyManager, keyResourceID string, hashFunc crypto.Hash, pluginConfig config.PluginConfig) kms.SignerVerifier {
 	return &okmsSignerVerifier{
 		keyManager:    km,
 		keyResourceID: keyResourceID,
 		hashFunc:      hashFunc,
+		pluginConfig:  pluginConfig,
 	}
 }
 
@@ -70,6 +73,18 @@ func (o *okmsSignerVerifier) SupportedAlgorithms() []string {
 	return s
 }
 
+// TODO: resolveKeyIDs returns an array of UUIDs. It is not necessary right now, but it will be with the `use-more-recent` strategy.
+func (o *okmsSignerVerifier) resolveKeyIDs(ctx context.Context) ([]uuid.UUID, error) {
+	if o.pluginConfig.OnKeyConflict.Strategy == config.ConflictStrategyError {
+		id, err := o.keyManager.GetKeyIDByName(ctx, o.keyResourceID)
+		if err != nil {
+			return nil, err
+		}
+		return []uuid.UUID{id}, nil
+	}
+	return nil, nil
+}
+
 // PublicKey retrieves the public key associated with the keyResourceID.
 func (o *okmsSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypto.PublicKey, error) {
 	ctx := context.Background()
@@ -77,11 +92,11 @@ func (o *okmsSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypt
 		opt.ApplyContext(&ctx)
 	}
 
-	keyResourceID, err := uuid.Parse(o.keyResourceID)
+	ids, err := o.resolveKeyIDs(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("invalid key id: %w", err)
+		return nil, err
 	}
-	return o.keyManager.GetPublicKey(ctx, keyResourceID)
+	return o.keyManager.GetPublicKey(ctx, ids[0])
 }
 
 // SignMessage signs the provided message using the configured key and hash function.

@@ -22,6 +22,7 @@ import (
 
 type KeyManager interface {
 	GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
+	GetKeyIDByName(ctx context.Context, name string) (uuid.UUID, error)
 	CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
 	Sign(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
 	Verify(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
@@ -81,6 +82,41 @@ func (o *okmsKeyManager) GetPublicKey(ctx context.Context, keyResourceID uuid.UU
 		return nil, fmt.Errorf("failed to convert jwk to public key: %w", err)
 	}
 	return publicKey, nil
+}
+
+func (o *okmsKeyManager) filterKeysByName(ctx context.Context, name string) ([]types.GetServiceKeyResponse, error) {
+	var matches []types.GetServiceKeyResponse
+
+	iter := o.client.ListAllServiceKeys(o.okmsID, nil, utils.PtrTo(types.KeyStatesActive))
+	for key, err := range iter.Iter(ctx) {
+		if err != nil {
+			return nil, fmt.Errorf("listing keys: %w", err)
+		}
+		if key.Name == name {
+			matches = append(matches, *key)
+		}
+	}
+	return matches, nil
+}
+
+func (o *okmsKeyManager) GetKeyIDByName(ctx context.Context, name string) (uuid.UUID, error) {
+	matches, err := o.filterKeysByName(ctx, name)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	switch len(matches) {
+	case 0:
+		return uuid.Nil, fmt.Errorf("key not found: no key named %s", name)
+	case 1:
+		return matches[0].Id, nil
+	default:
+		ids := make([]string, len(matches))
+		for i, m := range matches {
+			ids[i] = m.Id.String()
+		}
+		return uuid.Nil, fmt.Errorf("ambiguous key name %s: %d active keys found", name, len(matches))
+	}
 }
 
 func (o *okmsKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {

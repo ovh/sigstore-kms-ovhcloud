@@ -25,7 +25,7 @@ import (
 
 /*
 The following environment variable must be set:
-KMS_INTEGRATION_KEY_ID - UUID of an existing key on the target KMS instance.
+KMS_INTEGRATION_KEY_NAME - UUID of an existing key on the target KMS instance.
 
 Credentials are loaded from the standard configuration (environment variables or ~/.ovh-kms/okms.yaml).
 Or with these environment variables:
@@ -37,8 +37,8 @@ KMS_RESTAPI_AUTH_KEY - OKMS HTTP Key
 */
 
 func TestMain(m *testing.M) {
-	if os.Getenv("KMS_INTEGRATION_KEY_ID") == "" {
-		panic("KMS_INTEGRATION_KEY_ID must be set")
+	if os.Getenv("KMS_INTEGRATION_KEY_NAME") == "" {
+		panic("KMS_INTEGRATION_KEY_NAME must be set")
 	}
 	os.Exit(m.Run())
 }
@@ -74,7 +74,7 @@ func deleteKey(t *testing.T, client *okms.Client, keyResourceID string) {
 }
 
 func TestNewOkmsSignerVerifier(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEY_NAME")
 
 	cfg, err := config.NewConfig()
 	require.NoError(t, err)
@@ -113,7 +113,7 @@ func TestCreateKey(t *testing.T) {
 }
 
 func TestPublicKey(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEY_NAME")
 
 	signerVerifier, _ := loadSignerVerifier(t, keyID, crypto.SHA256)
 
@@ -123,7 +123,7 @@ func TestPublicKey(t *testing.T) {
 }
 
 func TestSignMessage(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEY_NAME")
 
 	signerVerifier, _ := loadSignerVerifier(t, keyID, crypto.SHA256)
 
@@ -134,7 +134,7 @@ func TestSignMessage(t *testing.T) {
 }
 
 func TestVerifySignature(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEY_NAME")
 
 	signerVerifier, _ := loadSignerVerifier(t, keyID, crypto.SHA256)
 

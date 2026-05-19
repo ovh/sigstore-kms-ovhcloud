@@ -160,10 +160,10 @@ Defines the behavior when multiple keys share the same name.
 
 ## Usage
 
-The plugin uses the `ovhcloud://` URI scheme followed by the specific key UUID you want to use for cryptographic
+The plugin uses the `ovhcloud://` URI scheme followed by the specific key name you want to use for cryptographic
 operations.
 
-URI format : `ovhcloud://<key_uuid>`
+URI format : `ovhcloud://<key_name>`
 
 ### Generating a key pair
 
@@ -174,7 +174,7 @@ cosign generate-key-pair --kms ovhcloud://<key_name>
 ### Extracting the public key
 
 ```bash
-cosign public-key --key ovhcloud://<key_id>
+cosign public-key --key ovhcloud://<key_name>
 ```
 
 ### Docker image
@@ -182,13 +182,13 @@ cosign public-key --key ovhcloud://<key_id>
 #### Signing
 
 ```bash
-cosign sign --key ovhcloud://<key_id> <my_image>@<image_digest>
+cosign sign --key ovhcloud://<key_name> <my_image>@<image_digest>
 ```
 
 #### Verifying
 
 ```bash
-cosign verify --key ovhcloud://<key_id> <my_image>@<image_digest>
+cosign verify --key ovhcloud://<key_name> <my_image>@<image_digest>
 ```
 
 ## Related links

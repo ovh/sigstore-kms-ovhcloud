@@ -329,3 +329,65 @@ func TestKeyManager_Verify(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestKeyManager_GetKeyIDByName(t *testing.T) {
+	okmsID := uuid.New()
+
+	t.Run("list error", func(t *testing.T) {
+		expectedError := errors.New("network error")
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			ListServiceKeys(mock.Anything, okmsID, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, expectedError)
+
+		id, err := keyManagerMock(apiMock, okmsID).GetKeyIDByName(context.Background(), "test-key")
+
+		assert.Equal(t, uuid.Nil, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("key not found", func(t *testing.T) {
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			ListServiceKeys(mock.Anything, okmsID, mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.ListServiceKeysResponse{ObjectsList: []types.GetServiceKeyResponse{
+				{Id: uuid.New(), Name: "test-key"},
+			}}, nil)
+
+		id, err := keyManagerMock(apiMock, okmsID).GetKeyIDByName(context.Background(), "invalid-key")
+
+		assert.Equal(t, uuid.Nil, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("ambiguous name", func(t *testing.T) {
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			ListServiceKeys(mock.Anything, okmsID, mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.ListServiceKeysResponse{ObjectsList: []types.GetServiceKeyResponse{
+				{Id: uuid.New(), Name: "test-key"},
+				{Id: uuid.New(), Name: "test-key"},
+			}}, nil)
+
+		id, err := keyManagerMock(apiMock, okmsID).GetKeyIDByName(context.Background(), "test-key")
+
+		assert.Equal(t, uuid.Nil, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		expectedID := uuid.New()
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			ListServiceKeys(mock.Anything, okmsID, mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.ListServiceKeysResponse{ObjectsList: []types.GetServiceKeyResponse{
+				{Id: expectedID, Name: "test-key"},
+				{Id: uuid.New(), Name: "other-key"},
+			}}, nil)
+
+		id, err := keyManagerMock(apiMock, okmsID).GetKeyIDByName(context.Background(), "test-key")
+
+		require.NoError(t, err)
+		assert.Equal(t, expectedID, id)
+	})
+}

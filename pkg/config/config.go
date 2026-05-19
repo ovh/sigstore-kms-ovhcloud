@@ -17,21 +17,6 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
-type Config struct {
-	Endpoint  string     `koanf:"endpoint"`
-	CA        string     `koanf:"ca"`
-	Auth      AuthConfig `koanf:"auth"`
-	TlsConfig *tls.Config
-}
-
-type AuthConfig struct {
-	Type   string `koanf:"type"`
-	Cert   string `koanf:"cert"`
-	Key    string `koanf:"key"`
-	OkmsID string `koanf:"okmsId"`
-	Token  string `koanf:"token"`
-}
-
 const (
 	envPrefix         = "KMS_"
 	defaultProfile    = "default"
@@ -67,6 +52,7 @@ func NewConfig() (*Config, error) {
 	cfg.TlsConfig = &tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
+	applyDefaultConfig(cfg)
 	if err := validateConfig(cfg); err != nil {
 		return nil, err
 	}
@@ -105,9 +91,28 @@ func resolveProfile(k *koanf.Koanf) string {
 func unmarshalConfig(k *koanf.Koanf, profile string) (*Config, error) {
 	var cfg Config
 
-	path := strings.Join([]string{"profiles", profile, "restapi"}, ".")
-	if err := k.Unmarshal(path, &cfg); err != nil {
-		return nil, fmt.Errorf("unmarshal config: %w", err)
+	restPath := strings.Join([]string{"profiles", profile, "restapi"}, ".")
+	if err := k.Unmarshal(restPath, &cfg); err != nil {
+		return nil, fmt.Errorf("unmarshal rest config: %w", err)
 	}
+
+	pluginPath := strings.Join([]string{"profiles", profile, "sigstore-kms-ovhcloud"}, ".")
+	if err := k.Unmarshal(pluginPath, &cfg.PluginConfig); err != nil {
+		return nil, fmt.Errorf("unmarshal plugin config: %w", err)
+	}
+
 	return &cfg, nil
+}
+
+func applyDefaultConfig(cfg *Config) {
+	if cfg.Auth.Type == "" {
+		cfg.Auth.Type = "mtls"
+	}
+
+	if cfg.PluginConfig.OnKeyConflict.Strategy == "" {
+		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyError
+	}
+	if cfg.PluginConfig.OnKeyConflict.Strategy == ConflictStrategyUseMoreRecent && cfg.PluginConfig.OnKeyConflict.MaxKeysToTry == 0 {
+		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = 1
+	}
 }

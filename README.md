@@ -15,6 +15,7 @@ for [OVHcloud KMS](https://help.ovhcloud.com/csm/en-ie-kms-quick-start?id=kb_art
 - [Configuration](#configuration)
   - [mTLS authentication](#mtls-authentication)
   - [Token authentication](#token-authentication)
+  - [Plugin configuration](#plugin-configuration)
 - [Usage](#usage)
 - [Related links](#related-links)
 
@@ -71,12 +72,12 @@ make install PREFIX=$HOME/.local # installs to $HOME/.local/bin
 
 ## Configuration
 
-**OVH provider supports both `mTLS` and `token` authentication.**
-
 Default settings can be set using a configuration file named `okms.yaml` and located in the `${HOME}/.ovh-kms`
 directory.
 If you don't wish to use this default file, you can create your own and specify the full path in the `KMS_CONFIG`
 environment variable.
+
+**OVH provider supports both `mTLS` and `token` authentication.**
 
 ### mTLS authentication
 
@@ -117,7 +118,7 @@ profiles:
       auth:
         type: token
         token: <token>
-        okmsId: <okms-id> # for example: "734b9b45-8b1a-469c-b140-b10bd6540017"
+        okms-id: <okms-id> # for example: "734b9b45-8b1a-469c-b140-b10bd6540017"
 ```
 
 These settings can be overwritten using environment variables:
@@ -127,6 +128,35 @@ These settings can be overwritten using environment variables:
 - `KMS_RESTAPI_TYPE`
 - `KMS_RESTAPI_OKMSID`
 - `KMS_RESTAPI_TOKEN`
+
+### Plugin configuration
+
+Plugin-specific settings are defined under the `sigstore-kms-ovhcloud` key of the active profile.
+
+Example of `okms.yaml`:
+
+```yaml
+version: 1
+profile: default # Name of the active profile
+profiles:
+  default:
+    restapi:
+      endpoint: <kms-endpoint>
+      # ...
+    sigstore-kms-ovhcloud:
+      on-key-conflict:
+        strategy: use-more-recent # "error" (default) or "use-more-recent"
+        max-keys-to-try: 3 # Only applicable with "use-more-recent", for verification. -1 to try all. Defaults to 1.
+```
+
+#### `on-key-conflict`
+
+Defines the behavior when multiple keys share the same name.
+
+| Field             | Description                                                                                                                                                                   | Default |
+|-------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| `strategy`        | `error` - return an error listing all matching keys. `use-more-recent` - use the most recently valid matching key.                                                            | `error` |
+| `max-keys-to-try` | Maximum number of matching keys to try, until verification succeeds. Use `-1` to try all. Only applicable with the `use-more-recent` strategy, and only for **verification**. | `1`     |
 
 ## Usage
 

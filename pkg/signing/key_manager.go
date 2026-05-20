@@ -11,6 +11,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"sort"
+	"time"
 
 	"github.com/ovh/sigstore-kms-ovhcloud/pkg/config"
 	"github.com/ovh/sigstore-kms-ovhcloud/pkg/utils"
@@ -23,6 +25,7 @@ import (
 type KeyManager interface {
 	GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
 	GetKeyIDByName(ctx context.Context, name string) (uuid.UUID, error)
+	ListKeysByName(ctx context.Context, name string) ([]uuid.UUID, error)
 	CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
 	Sign(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
 	Verify(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
@@ -113,6 +116,43 @@ func (o *okmsKeyManager) GetKeyIDByName(ctx context.Context, name string) (uuid.
 	default:
 		return uuid.Nil, fmt.Errorf("ambiguous key name %s: %d active keys found", name, len(matches))
 	}
+}
+
+func parseCreatedAt(attributes *map[string]interface{}) time.Time {
+	if attributes != nil {
+		if str, ok := (*attributes)["original_creation_date"].(string); ok {
+			if t, err := time.Parse(time.RFC3339, str); err == nil {
+				return t
+			}
+		}
+	}
+	return time.Time{}
+}
+
+func (o *okmsKeyManager) ListKeysByName(ctx context.Context, name string) ([]uuid.UUID, error) {
+	matches, err := o.filterKeysByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	sort.SliceStable(matches, func(i, j int) bool {
+		ti := parseCreatedAt(matches[i].Attributes)
+		tj := parseCreatedAt(matches[j].Attributes)
+
+		if ti.IsZero() {
+			return false
+		}
+		if tj.IsZero() {
+			return true
+		}
+		return ti.After(tj)
+	})
+
+	ids := make([]uuid.UUID, len(matches))
+	for i, m := range matches {
+		ids[i] = m.Id
+	}
+	return ids, nil
 }
 
 func (o *okmsKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {

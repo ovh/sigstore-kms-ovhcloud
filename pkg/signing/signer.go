@@ -74,8 +74,7 @@ func (o *okmsSignerVerifier) SupportedAlgorithms() []string {
 	return s
 }
 
-// TODO: resolveKeyIDs returns an array of UUIDs. It is not necessary right now, but it will be with the `use-more-recent` strategy.
-func (o *okmsSignerVerifier) resolveKeyIDs(ctx context.Context) ([]uuid.UUID, error) {
+func (o *okmsSignerVerifier) resolveKeyIDs(ctx context.Context, maxKeys int) ([]uuid.UUID, error) {
 	if o.pluginConfig.OnKeyConflict.Strategy == config.ConflictStrategyError {
 		id, err := o.keyManager.GetKeyIDByName(ctx, o.keyResourceName)
 		if err != nil {
@@ -83,7 +82,18 @@ func (o *okmsSignerVerifier) resolveKeyIDs(ctx context.Context) ([]uuid.UUID, er
 		}
 		return []uuid.UUID{id}, nil
 	}
-	return nil, nil
+
+	keys, err := o.keyManager.ListKeysByName(ctx, o.keyResourceName)
+	if err != nil {
+		return nil, err
+	}
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("key not found: no key named %s", o.keyResourceName)
+	}
+	if maxKeys == -1 || maxKeys > len(keys) {
+		maxKeys = len(keys)
+	}
+	return keys[:maxKeys], nil
 }
 
 // PublicKey retrieves the public key associated with the keyResourceID.
@@ -93,7 +103,7 @@ func (o *okmsSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypt
 		opt.ApplyContext(&ctx)
 	}
 
-	ids, err := o.resolveKeyIDs(ctx)
+	ids, err := o.resolveKeyIDs(ctx, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +131,7 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 		}
 	}
 
-	ids, err := o.resolveKeyIDs(ctx)
+	ids, err := o.resolveKeyIDs(ctx, 1)
 	if err != nil {
 		return nil, fmt.Errorf("invalid key id: %w", err)
 	}
@@ -160,24 +170,31 @@ func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...sig
 		}
 	}
 
-	ids, err := o.resolveKeyIDs(ctx)
-	if err != nil {
-		return fmt.Errorf("invalid key id: %w", err)
-	}
-	publicKey, err := o.keyManager.GetPublicKey(ctx, ids[0])
-	if err != nil {
-		return err
-	}
-	algorithm, err := determineAlgorithm(publicKey, hashFunc, signerOpts)
-	if err != nil {
-		return err
-	}
 	sigBytes, err := io.ReadAll(sig)
 	if err != nil {
 		return fmt.Errorf("reading signature: %w", err)
 	}
 
-	return o.keyManager.Verify(ctx, ids[0], digest, algorithm, sigBytes)
+	ids, err := o.resolveKeyIDs(ctx, o.pluginConfig.OnKeyConflict.MaxKeysToTry)
+	if err != nil {
+		return fmt.Errorf("invalid key id: %w", err)
+	}
+
+	for _, keyID := range ids {
+		publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
+		if err != nil {
+			continue
+		}
+		algorithm, err := determineAlgorithm(publicKey, hashFunc, signerOpts)
+		if err != nil {
+			continue
+		}
+		if err := o.keyManager.Verify(ctx, keyID, digest, algorithm, sigBytes); err != nil {
+			continue
+		}
+		return nil
+	}
+	return fmt.Errorf("failed to verify signature with this key name: %s", o.keyResourceName)
 }
 
 // determineAlgorithm determines the digital signature algorithm to use based on the public key type, hash function, and signer options.

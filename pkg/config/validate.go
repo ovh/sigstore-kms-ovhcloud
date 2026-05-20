@@ -23,6 +23,7 @@ func validateConfig(cfg *Config) error {
 		validateProtocol,
 		validateCertPool,
 		validateAuth,
+		validatePluginConfig,
 	}
 
 	for _, v := range validators {
@@ -51,7 +52,7 @@ func validateCertPool(cfg *Config) error {
 
 func validateAuth(cfg *Config) error {
 	switch cfg.Auth.Type {
-	case "mtls", "":
+	case "mtls":
 		return validateAuthMtls(cfg)
 	case "token":
 		return validateAuthToken(cfg)
@@ -84,6 +85,22 @@ func validateAuthToken(cfg *Config) error {
 	}
 	if cfg.Auth.Token == "" {
 		errs = append(errs, errors.New("missing token"))
+	}
+
+	return errors.Join(errs...)
+}
+
+func validatePluginConfig(cfg *Config) error {
+	var errs []error
+
+	switch cfg.PluginConfig.OnKeyConflict.Strategy {
+	case ConflictStrategyError, ConflictStrategyUseMoreRecent:
+	default:
+		errs = append(errs, fmt.Errorf("invalid on-key-conflict strategy: must be %q or %q", ConflictStrategyError, ConflictStrategyUseMoreRecent))
+	}
+
+	if cfg.PluginConfig.OnKeyConflict.MaxKeysToTry < -1 {
+		errs = append(errs, errors.New("max-keys-to-try must be -1 (try all) or a positive integer"))
 	}
 
 	return errors.Join(errs...)

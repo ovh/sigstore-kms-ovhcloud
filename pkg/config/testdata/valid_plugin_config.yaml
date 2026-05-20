@@ -1,11 +1,14 @@
 version: 1
-profile: default # Name of the active profile
+profile: default
 profiles:
   default:
     restapi:
       endpoint: https://eu-west-rbx.okms.ovh.net
-      ca: /path/to/public-ca.crt # Optional if the CA is in system store
       auth:
         type: token
         okms-id: okms_id
         token: token
+    sigstore-kms-ovhcloud:
+      on-key-conflict:
+        strategy: use-more-recent
+        max-keys-to-try: 3

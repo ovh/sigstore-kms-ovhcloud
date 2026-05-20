@@ -7,6 +7,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ovh/sigstore-kms-ovhcloud/pkg/testutils"
@@ -64,7 +65,7 @@ func TestUnmarshalConfig(t *testing.T) {
 	k := koanf.New(".")
 
 	_ = k.Set("profiles."+defaultProfile+".restapi.ca", expectedCA)
-	_ = k.Set("profiles."+defaultProfile+".restapi.auth.okmsid", expectedID)
+	_ = k.Set("profiles."+defaultProfile+".restapi.auth.okms-id", expectedID)
 	_ = k.Set("profiles."+defaultProfile+".restapi.auth.token", expectedToken)
 	_ = k.Set("profiles."+defaultProfile+".restapi.auth.key", expectedKey)
 
@@ -74,6 +75,18 @@ func TestUnmarshalConfig(t *testing.T) {
 	assert.Equal(t, expectedID, cfg.Auth.OkmsID)
 	assert.Equal(t, expectedToken, cfg.Auth.Token)
 	assert.Equal(t, expectedKey, cfg.Auth.Key)
+}
+
+func TestUnmarshalPluginConfig(t *testing.T) {
+	k := koanf.New(".")
+
+	_ = k.Set(strings.Join([]string{"profiles", defaultProfile, "sigstore-kms-ovhcloud", "on-key-conflict", "strategy"}, "."), ConflictStrategyUseMoreRecent)
+	_ = k.Set(strings.Join([]string{"profiles", defaultProfile, "sigstore-kms-ovhcloud", "on-key-conflict", "max-keys-to-try"}, "."), 3)
+
+	cfg, err := unmarshalConfig(k, defaultProfile)
+	require.NoError(t, err)
+	assert.Equal(t, ConflictStrategyUseMoreRecent, cfg.PluginConfig.OnKeyConflict.Strategy)
+	assert.Equal(t, 3, cfg.PluginConfig.OnKeyConflict.MaxKeysToTry)
 }
 
 func TestLoadFileConfig(t *testing.T) {
@@ -88,10 +101,23 @@ func TestLoadFileConfig(t *testing.T) {
 	assert.Equal(t, "default", profile)
 
 	base := "profiles.default.restapi"
-	assert.Equal(t, "https://myserver.acme.com", k.String(base+".endpoint"))
+	assert.Equal(t, "https://eu-west-rbx.okms.ovh.net", k.String(base+".endpoint"))
 	assert.Equal(t, "/path/to/public-ca.crt", k.String(base+".ca"))
 	assert.Equal(t, "/path/to/domain/cert.pem", k.String(base+".auth.cert"))
 	assert.Equal(t, "/path/to/domain/key.pem", k.String(base+".auth.key"))
+}
+
+func TestLoadFilePluginConfig(t *testing.T) {
+	k := koanf.New(".")
+
+	t.Setenv("HOME", copyTestConfig(t, "valid_plugin_config.yaml"))
+
+	err := loadConfigFile(k)
+	require.NoError(t, err)
+
+	base := "profiles.default.sigstore-kms-ovhcloud"
+	assert.Equal(t, "use-more-recent", k.String(base+".on-key-conflict.strategy"))
+	assert.Equal(t, 3, k.Int(base+".on-key-conflict.max-keys-to-try"))
 }
 
 func TestNewConfig(t *testing.T) {
@@ -134,5 +160,38 @@ func TestNewConfig(t *testing.T) {
 		assert.Equal(t, expectedEndpoint, cfg.Endpoint)
 		assert.Equal(t, caPath, cfg.CA)
 		assert.NotNil(t, cfg.TlsConfig)
+	})
+}
+
+func TestValidatePluginConfig(t *testing.T) {
+	t.Run("use-more-recent strategy valid", func(t *testing.T) {
+		cfg := &Config{}
+		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyUseMoreRecent
+		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = 2
+		require.NoError(t, validatePluginConfig(cfg))
+		require.Equal(t, ConflictStrategyUseMoreRecent, cfg.PluginConfig.OnKeyConflict.Strategy)
+		require.Equal(t, 2, cfg.PluginConfig.OnKeyConflict.MaxKeysToTry)
+	})
+
+	t.Run("use-more-recent strategy try all keys valid", func(t *testing.T) {
+		cfg := &Config{}
+		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyUseMoreRecent
+		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = -1
+		require.NoError(t, validatePluginConfig(cfg))
+		require.Equal(t, ConflictStrategyUseMoreRecent, cfg.PluginConfig.OnKeyConflict.Strategy)
+		require.Equal(t, -1, cfg.PluginConfig.OnKeyConflict.MaxKeysToTry)
+	})
+
+	t.Run("use-more-recent strategy invalid", func(t *testing.T) {
+		cfg := &Config{}
+		cfg.PluginConfig.OnKeyConflict.Strategy = "invalid"
+		require.Error(t, validatePluginConfig(cfg))
+	})
+
+	t.Run("use-more-recent strategy max-keys-try invalid", func(t *testing.T) {
+		cfg := &Config{}
+		cfg.PluginConfig.OnKeyConflict.Strategy = ConflictStrategyUseMoreRecent
+		cfg.PluginConfig.OnKeyConflict.MaxKeysToTry = -2
+		require.Error(t, validatePluginConfig(cfg))
 	})
 }

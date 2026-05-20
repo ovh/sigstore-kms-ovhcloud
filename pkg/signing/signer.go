@@ -42,19 +42,20 @@ var okmsSupportedAlgorithms = []types.DigitalSignatureAlgorithms{
 const defaultAlgorithm = types.ES256
 
 type okmsSignerVerifier struct {
-	keyManager    KeyManager
-	keyResourceID string
-	hashFunc      crypto.Hash
-	pluginConfig  config.PluginConfig
+	keyManager      KeyManager
+	keyResourceID   string
+	keyResourceName string
+	hashFunc        crypto.Hash
+	pluginConfig    config.PluginConfig
 }
 
 // NewOkmsSignerVerifier returns an instance of okmsSignerVerifier which is an implementation of kms.SignerVerifier.
-func NewOkmsSignerVerifier(km KeyManager, keyResourceID string, hashFunc crypto.Hash, pluginConfig config.PluginConfig) kms.SignerVerifier {
+func NewOkmsSignerVerifier(km KeyManager, keyResourceName string, hashFunc crypto.Hash, pluginConfig config.PluginConfig) kms.SignerVerifier {
 	return &okmsSignerVerifier{
-		keyManager:    km,
-		keyResourceID: keyResourceID,
-		hashFunc:      hashFunc,
-		pluginConfig:  pluginConfig,
+		keyManager:      km,
+		keyResourceName: keyResourceName,
+		hashFunc:        hashFunc,
+		pluginConfig:    pluginConfig,
 	}
 }
 
@@ -76,7 +77,7 @@ func (o *okmsSignerVerifier) SupportedAlgorithms() []string {
 // TODO: resolveKeyIDs returns an array of UUIDs. It is not necessary right now, but it will be with the `use-more-recent` strategy.
 func (o *okmsSignerVerifier) resolveKeyIDs(ctx context.Context) ([]uuid.UUID, error) {
 	if o.pluginConfig.OnKeyConflict.Strategy == config.ConflictStrategyError {
-		id, err := o.keyManager.GetKeyIDByName(ctx, o.keyResourceID)
+		id, err := o.keyManager.GetKeyIDByName(ctx, o.keyResourceName)
 		if err != nil {
 			return nil, err
 		}
@@ -215,7 +216,7 @@ func determineAlgorithm(publicKey crypto.PublicKey, hashFunc crypto.Hash, opts c
 
 // CreateKey creates a key pair on the KMS and returns the public key.
 func (o *okmsSignerVerifier) CreateKey(ctx context.Context, algorithm string) (crypto.PublicKey, error) {
-	keyID, err := o.keyManager.CreateKey(ctx, o.keyResourceID, algorithm)
+	keyID, err := o.keyManager.CreateKey(ctx, o.keyResourceName, algorithm)
 	if err != nil {
 		return nil, err
 	}

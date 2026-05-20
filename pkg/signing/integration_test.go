@@ -25,15 +25,15 @@ import (
 
 /*
 The following environment variable must be set:
-KMS_INTEGRATION_KEY_NAME - UUID of an existing key on the target KMS instance.
+KMS_INTEGRATION_KEY_NAME - Name of an existing key on the target KMS instance.
 
 Credentials are loaded from the standard configuration (environment variables or ~/.ovh-kms/okms.yaml).
 Or with these environment variables:
 KMS_RESTAPI_ENDPOINT - OKMS HTTP Endpoint
 KMS_RESTAPI_CA - OKMS HTTP CA (Optional)
 KMS_RESTAPI_OKMSID - OKMS ID
-KMS_RESTAPI_AUTH_CERT - OKMS HTTP Certificate
-KMS_RESTAPI_AUTH_KEY - OKMS HTTP Key
+KMS_RESTAPI_CERT - OKMS HTTP Certificate
+KMS_RESTAPI_KEY - OKMS HTTP Key
 */
 
 func TestMain(m *testing.M) {
@@ -52,18 +52,15 @@ func loadSignerVerifier(t *testing.T, keyID string, hashFunc crypto.Hash) (*okms
 	keyManager, err := NewOkmsKeyManager(cfg)
 	require.NoError(t, err, "failed to create KMS key manager")
 
-	signerVerifier := NewOkmsSignerVerifier(keyManager, keyID, hashFunc).(*okmsSignerVerifier)
+	signerVerifier := NewOkmsSignerVerifier(keyManager, keyID, hashFunc, defaultPluginConfig).(*okmsSignerVerifier)
 	require.NotNil(t, signerVerifier)
 
 	return signerVerifier, keyManager.(*okmsKeyManager)
 }
 
-func deleteKey(t *testing.T, client *okms.Client, keyResourceID string) {
+func deleteKey(t *testing.T, client *okms.Client, okmsID uuid.UUID, keyResourceID string) {
 	t.Helper()
 
-	okmsIDStr := os.Getenv("KMS_RESTAPI_OKMSID")
-	okmsID, err := uuid.Parse(okmsIDStr)
-	require.NoError(t, err)
 	keyID, err := uuid.Parse(keyResourceID)
 	require.NoError(t, err)
 
@@ -82,13 +79,13 @@ func TestNewOkmsSignerVerifier(t *testing.T) {
 	keyManager, err := NewOkmsKeyManager(cfg)
 	require.NoError(t, err)
 
-	signerVerifier := NewOkmsSignerVerifier(keyManager, keyID, crypto.SHA256)
+	signerVerifier := NewOkmsSignerVerifier(keyManager, keyID, crypto.SHA256, defaultPluginConfig)
 	require.NotNil(t, signerVerifier)
 
 	okmsSignerVerifier, ok := signerVerifier.(*okmsSignerVerifier)
 	require.True(t, ok)
 
-	assert.Equal(t, okmsSignerVerifier.keyResourceID, keyID)
+	assert.Equal(t, okmsSignerVerifier.keyResourceName, keyID)
 
 	okmsKeyManager, ok := okmsSignerVerifier.keyManager.(*okmsKeyManager)
 	require.True(t, ok)
@@ -109,7 +106,7 @@ func TestCreateKey(t *testing.T) {
 	_, ok := publicKey.(*ecdsa.PublicKey)
 	assert.True(t, ok)
 
-	deleteKey(t, keyManager.client, signerVerifier.keyResourceID)
+	deleteKey(t, keyManager.client, keyManager.okmsID, signerVerifier.keyResourceID)
 }
 
 func TestPublicKey(t *testing.T) {

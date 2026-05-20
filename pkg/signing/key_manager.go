@@ -111,10 +111,6 @@ func (o *okmsKeyManager) GetKeyIDByName(ctx context.Context, name string) (uuid.
 	case 1:
 		return matches[0].Id, nil
 	default:
-		ids := make([]string, len(matches))
-		for i, m := range matches {
-			ids[i] = m.Id.String()
-		}
 		return uuid.Nil, fmt.Errorf("ambiguous key name %s: %d active keys found", name, len(matches))
 	}
 }

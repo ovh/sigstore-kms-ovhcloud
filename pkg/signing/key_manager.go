@@ -118,9 +118,9 @@ func (o *okmsKeyManager) GetKeyIDByName(ctx context.Context, name string) (uuid.
 	}
 }
 
-func parseCreatedAt(attributes *map[string]interface{}) time.Time {
+func parseCreatedAt(attributes map[string]interface{}) time.Time {
 	if attributes != nil {
-		if str, ok := (*attributes)["original_creation_date"].(string); ok {
+		if str, ok := attributes["original_creation_date"].(string); ok {
 			if t, err := time.Parse(time.RFC3339, str); err == nil {
 				return t
 			}
@@ -136,8 +136,15 @@ func (o *okmsKeyManager) ListKeysByName(ctx context.Context, name string) ([]uui
 	}
 
 	sort.SliceStable(matches, func(i, j int) bool {
-		ti := parseCreatedAt(matches[i].Attributes)
-		tj := parseCreatedAt(matches[j].Attributes)
+		var attributesI, attributesJ map[string]interface{}
+		if matches[i].Attributes != nil {
+			attributesI = *matches[i].Attributes
+		}
+		if matches[j].Attributes != nil {
+			attributesJ = *matches[j].Attributes
+		}
+		ti := parseCreatedAt(attributesI)
+		tj := parseCreatedAt(attributesJ)
 
 		if ti.IsZero() {
 			return false

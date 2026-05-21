@@ -391,3 +391,56 @@ func TestKeyManager_GetKeyIDByName(t *testing.T) {
 		assert.Equal(t, expectedID, id)
 	})
 }
+
+func TestKeyManager_ListKeysByName(t *testing.T) {
+	okmsID := uuid.New()
+
+	t.Run("list error", func(t *testing.T) {
+		expectedError := errors.New("network error")
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			ListServiceKeys(mock.Anything, okmsID, mock.Anything, mock.Anything, mock.Anything).
+			Return(nil, expectedError)
+
+		id, err := keyManagerMock(apiMock, okmsID).GetKeyIDByName(context.Background(), "test-key")
+
+		assert.Equal(t, uuid.Nil, id)
+		assert.Error(t, err)
+	})
+
+	t.Run("no key found", func(t *testing.T) {
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			ListServiceKeys(mock.Anything, okmsID, mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.ListServiceKeysResponse{ObjectsList: []types.GetServiceKeyResponse{
+				{Id: uuid.New(), Name: "test-key"},
+			}}, nil)
+
+		ids, err := keyManagerMock(apiMock, okmsID).ListKeysByName(context.Background(), "invalid-key")
+
+		require.NoError(t, err)
+		assert.Empty(t, ids)
+	})
+
+	t.Run("multiple matches sorted", func(t *testing.T) {
+		recentID := uuid.New()
+		recentAttributes := map[string]interface{}{"original_creation_date": "2026-02-01T00:00:00Z"}
+		olderID := uuid.New()
+		olderAttributes := map[string]interface{}{"original_creation_date": "2026-01-01T00:00:00Z"}
+
+		apiMock := mocks.NewAPIMock(t)
+		apiMock.EXPECT().
+			ListServiceKeys(mock.Anything, okmsID, mock.Anything, mock.Anything, mock.Anything).
+			Return(&types.ListServiceKeysResponse{ObjectsList: []types.GetServiceKeyResponse{
+				{Id: olderID, Name: "test-key", Attributes: &olderAttributes},
+				{Id: recentID, Name: "test-key", Attributes: &recentAttributes},
+			}}, nil)
+
+		ids, err := keyManagerMock(apiMock, okmsID).ListKeysByName(context.Background(), "test-key")
+
+		require.NoError(t, err)
+		require.Len(t, ids, 2)
+		assert.Equal(t, recentID, ids[0])
+		assert.Equal(t, olderID, ids[1])
+	})
+}

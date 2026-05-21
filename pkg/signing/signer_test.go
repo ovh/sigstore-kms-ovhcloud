@@ -30,6 +30,7 @@ import (
 type mockKeyManager struct {
 	getPublicKeyFn   func(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
 	getKeyIDByNameFn func(ctx context.Context, name string) (uuid.UUID, error)
+	listKeysByNameFn func(ctx context.Context, name string) ([]uuid.UUID, error)
 	createKeyFn      func(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
 	signFn           func(ctx context.Context, keyID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
 	verifyFn         func(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
@@ -47,6 +48,13 @@ func (m *mockKeyManager) GetKeyIDByName(ctx context.Context, name string) (uuid.
 		return m.getKeyIDByNameFn(ctx, name)
 	}
 	return uuid.New(), nil
+}
+
+func (m *mockKeyManager) ListKeysByName(ctx context.Context, name string) ([]uuid.UUID, error) {
+	if m.listKeysByNameFn != nil {
+		return m.listKeysByNameFn(ctx, name)
+	}
+	return nil, nil
 }
 
 func (m *mockKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {
@@ -483,5 +491,148 @@ func TestSigner_VerifySignature(t *testing.T) {
 
 		require.NoError(t, err)
 		assert.Equal(t, types.RS512, receivedAlgorithm)
+	})
+}
+
+func useMoreRecentPluginConfig(maxKeysToTry int) config.PluginConfig {
+	return config.PluginConfig{
+		OnKeyConflict: config.OnKeyConflictConfig{
+			Strategy:     config.ConflictStrategyUseMoreRecent,
+			MaxKeysToTry: maxKeysToTry,
+		},
+	}
+}
+
+func TestSigner_SignMessage_UseMoreRecent(t *testing.T) {
+	t.Run("key name not found", func(t *testing.T) {
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "invalid-key", crypto.SHA256, useMoreRecentPluginConfig(1))
+		sig, err := signerVerifier.SignMessage(strings.NewReader("test message"))
+
+		assert.Nil(t, sig)
+		assert.Error(t, err)
+	})
+
+	t.Run("pick most recent key on name conflict", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		recentID := uuid.New()
+		olderID := uuid.New()
+
+		var receivedKeyID uuid.UUID
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
+				receivedKeyID = keyID
+				return &privateKey.PublicKey, nil
+			},
+			listKeysByNameFn: func(_ context.Context, _ string) ([]uuid.UUID, error) {
+				return []uuid.UUID{recentID, olderID}, nil
+			},
+			signFn: func(_ context.Context, _ uuid.UUID, _ []byte, _ types.DigitalSignatureAlgorithms) ([]byte, error) {
+				return []byte("test-signature"), nil
+			},
+		}
+
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, useMoreRecentPluginConfig(1))
+		sig, err := signerVerifier.SignMessage(strings.NewReader("test message"))
+
+		require.NoError(t, err)
+		assert.NotNil(t, sig)
+		assert.Equal(t, recentID, receivedKeyID)
+	})
+}
+
+func TestSigner_VerifySignature_UseMoreRecent(t *testing.T) {
+	t.Run("key name not found", func(t *testing.T) {
+		signerVerifier := NewOkmsSignerVerifier(defaultTestKeyManager, "test-key", crypto.SHA256, useMoreRecentPluginConfig(1))
+		err := signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
+
+		assert.Error(t, err)
+	})
+
+	t.Run("success with most recent key", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		recentID := uuid.New()
+		olderID := uuid.New()
+
+		var ids []uuid.UUID
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
+				ids = append(ids, keyID)
+				return &privateKey.PublicKey, nil
+			},
+			listKeysByNameFn: func(_ context.Context, _ string) ([]uuid.UUID, error) {
+				return []uuid.UUID{recentID, olderID}, nil
+			},
+		}
+
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, useMoreRecentPluginConfig(1))
+		err = signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
+
+		require.NoError(t, err)
+		assert.Equal(t, []uuid.UUID{recentID}, ids)
+	})
+
+	t.Run("error with recent key, but falls back with older key", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		recentID := uuid.New()
+		olderID := uuid.New()
+
+		var ids []uuid.UUID
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
+				ids = append(ids, keyID)
+				return &privateKey.PublicKey, nil
+			},
+			listKeysByNameFn: func(_ context.Context, _ string) ([]uuid.UUID, error) {
+				return []uuid.UUID{recentID, olderID}, nil
+			},
+			verifyFn: func(_ context.Context, keyResourceID uuid.UUID, _ []byte, _ types.DigitalSignatureAlgorithms, _ []byte) error {
+				if keyResourceID == recentID {
+					return errors.New("error with recent key")
+				}
+				return nil
+			},
+		}
+
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, useMoreRecentPluginConfig(2))
+		err = signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
+
+		require.NoError(t, err)
+		assert.Equal(t, []uuid.UUID{recentID, olderID}, ids)
+	})
+
+	t.Run("tries all keys", func(t *testing.T) {
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+
+		idsList := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
+
+		var ids []uuid.UUID
+		mock := &mockKeyManager{
+			getPublicKeyFn: func(_ context.Context, keyID uuid.UUID) (crypto.PublicKey, error) {
+				ids = append(ids, keyID)
+				return &privateKey.PublicKey, nil
+			},
+			listKeysByNameFn: func(_ context.Context, _ string) ([]uuid.UUID, error) {
+				return idsList, nil
+			},
+			verifyFn: func(_ context.Context, keyResourceID uuid.UUID, _ []byte, _ types.DigitalSignatureAlgorithms, _ []byte) error {
+				if keyResourceID == idsList[2] {
+					return nil
+				}
+				return errors.New("error by default")
+			},
+		}
+
+		signerVerifier := NewOkmsSignerVerifier(mock, "test-key", crypto.SHA256, useMoreRecentPluginConfig(-1))
+		err = signerVerifier.VerifySignature(bytes.NewReader([]byte("test signature")), bytes.NewReader([]byte("test message")))
+
+		require.NoError(t, err)
+		assert.Equal(t, idsList, ids)
 	})
 }

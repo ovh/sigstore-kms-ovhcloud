@@ -9,7 +9,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.5
 	github.com/ovh/okms-sdk-go v0.5.2
-	github.com/sigstore/sigstore v1.10.6
+	github.com/sigstore/sigstore v1.10.8
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -30,6 +30,7 @@ require (
 	github.com/secure-systems-lab/go-securesystemslib v0.11.0 // indirect
 	github.com/sigstore/protobuf-specs v0.5.1 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.52.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect

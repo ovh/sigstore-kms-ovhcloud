@@ -8,7 +8,7 @@ require (
 	github.com/knadh/koanf/providers/env/v2 v2.0.0
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.5
-	github.com/ovh/okms-sdk-go v0.5.2
+	github.com/ovh/okms-sdk-go v0.5.3
 	github.com/sigstore/sigstore v1.10.8
 	github.com/stretchr/testify v1.11.1
 )

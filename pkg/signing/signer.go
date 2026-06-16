@@ -55,6 +55,15 @@ func NewOkmsSignerVerifier(km KeyManager, keyResourceID string, hashFunc crypto.
 	}
 }
 
+// keyID parses the configured keyResourceID into a UUID.
+func (o *okmsSignerVerifier) keyID() (uuid.UUID, error) {
+	keyID, err := uuid.Parse(o.keyResourceID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid key id: %w", err)
+	}
+	return keyID, nil
+}
+
 // DefaultAlgorithm returns the default algorithm for the signer.
 func (o *okmsSignerVerifier) DefaultAlgorithm() string {
 	return string(defaultAlgorithm)
@@ -77,9 +86,9 @@ func (o *okmsSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypt
 		opt.ApplyContext(&ctx)
 	}
 
-	keyResourceID, err := uuid.Parse(o.keyResourceID)
+	keyResourceID, err := o.keyID()
 	if err != nil {
-		return nil, fmt.Errorf("invalid key id: %w", err)
+		return nil, err
 	}
 	return o.keyManager.GetPublicKey(ctx, keyResourceID)
 }
@@ -105,9 +114,9 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 		}
 	}
 
-	keyID, err := uuid.Parse(o.keyResourceID)
+	keyID, err := o.keyID()
 	if err != nil {
-		return nil, fmt.Errorf("invalid key id: %w", err)
+		return nil, err
 	}
 	publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
 	if err != nil {
@@ -144,9 +153,9 @@ func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...sig
 		}
 	}
 
-	keyID, err := uuid.Parse(o.keyResourceID)
+	keyID, err := o.keyID()
 	if err != nil {
-		return fmt.Errorf("invalid key id: %w", err)
+		return err
 	}
 	publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
 	if err != nil {
@@ -200,9 +209,9 @@ func determineAlgorithm(publicKey crypto.PublicKey, hashFunc crypto.Hash, opts c
 
 // CreateKey creates a key pair on the KMS and returns the public key.
 func (o *okmsSignerVerifier) CreateKey(ctx context.Context, algorithm string) (crypto.PublicKey, error) {
-	keyID, err := uuid.Parse(o.keyResourceID)
+	keyID, err := o.keyID()
 	if err != nil {
-		return nil, fmt.Errorf("invalid key id: %w", err)
+		return nil, err
 	}
 
 	createdKeyID, err := o.keyManager.CreateKey(ctx, keyID, algorithm)

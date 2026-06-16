@@ -133,7 +133,7 @@ These settings can be overwritten using environment variables:
 The plugin uses the `ovhcloud://` URI scheme followed by the specific key UUID you want to use for cryptographic
 operations.
 
-URI format : `ovhcloud://<key_uuid>`
+URI format : `ovhcloud://<key_id>`
 
 ### Generating a key pair
 

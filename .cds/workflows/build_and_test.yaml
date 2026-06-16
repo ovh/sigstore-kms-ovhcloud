@@ -45,7 +45,7 @@ jobs:
         run: |-
           #!/bin/bash
           set -euo pipefail
-          export KMS_INTEGRATION_KEY_ID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEY_ID}}"
+          export KMS_INTEGRATION_KEYID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEYID}}"
           export KMS_RESTAPI_ENDPOINT="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_ENDPOINT}}"
           export KMS_RESTAPI_OKMSID="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_OKMSID}}"
           export KMS_RESTAPI_CERT="$PWD/cert.pem"
@@ -124,7 +124,7 @@ jobs:
         run: |-
           #!/bin/bash
           set -euo pipefail
-          export KMS_INTEGRATION_KEY_ID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEY_ID}}"
+          export KMS_INTEGRATION_KEYID="${{vars.sigstore-kms-ovhcloud.KMS_INTEGRATION_KEYID}}"
           export KMS_RESTAPI_ENDPOINT="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_ENDPOINT}}"
           export KMS_RESTAPI_OKMSID="${{vars.sigstore-kms-ovhcloud.KMS_RESTAPI_OKMSID}}"
           export KMS_RESTAPI_CERT="$PWD/cert.pem"
@@ -149,4 +149,3 @@ jobs:
       - uses: actions/artifactoryRelease
         with:
           artifacts: sigstore-kms-ovhcloud.tar.gz
-

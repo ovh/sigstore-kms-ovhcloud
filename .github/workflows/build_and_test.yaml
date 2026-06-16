@@ -74,7 +74,7 @@ jobs:
         run: |-
           #!/bin/bash
           set -euo pipefail
-          export KMS_INTEGRATION_KEY_ID="${{ secrets.KMS_INTEGRATION_KEY_ID }}"
+          export KMS_INTEGRATION_KEYID="${{ secrets.KMS_INTEGRATION_KEYID }}"
           export KMS_RESTAPI_ENDPOINT="${{ secrets.KMS_RESTAPI_ENDPOINT }}"
           export KMS_RESTAPI_OKMSID="${{ secrets.KMS_RESTAPI_OKMSID }}"
           export KMS_RESTAPI_CERT="$PWD/cert.pem"
@@ -148,7 +148,7 @@ jobs:
         run: |-
           #!/bin/bash
           set -euo pipefail
-          export KMS_INTEGRATION_KEY_ID="${{ secrets.KMS_INTEGRATION_KEY_ID }}"
+          export KMS_INTEGRATION_KEYID="${{ secrets.KMS_INTEGRATION_KEYID }}"
           export KMS_RESTAPI_ENDPOINT="${{ secrets.KMS_RESTAPI_ENDPOINT }}"
           export KMS_RESTAPI_OKMSID="${{ secrets.KMS_RESTAPI_OKMSID }}"
           export KMS_RESTAPI_CERT="$PWD/cert.pem"

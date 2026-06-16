@@ -138,8 +138,10 @@ URI format : `ovhcloud://<key_uuid>`
 ### Generating a key pair
 
 ```bash
-cosign generate-key-pair --kms ovhcloud://<key_name>
+cosign generate-key-pair --kms ovhcloud://<key_id>
 ```
+
+The generated key will have the name: `cosign-<unix_ms_utc>`.
 
 ### Extracting the public key
 

@@ -200,13 +200,18 @@ func determineAlgorithm(publicKey crypto.PublicKey, hashFunc crypto.Hash, opts c
 
 // CreateKey creates a key pair on the KMS and returns the public key.
 func (o *okmsSignerVerifier) CreateKey(ctx context.Context, algorithm string) (crypto.PublicKey, error) {
-	keyID, err := o.keyManager.CreateKey(ctx, o.keyResourceID, algorithm)
+	keyID, err := uuid.Parse(o.keyResourceID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid key id: %w", err)
+	}
+
+	createdKeyID, err := o.keyManager.CreateKey(ctx, keyID, algorithm)
 	if err != nil {
 		return nil, err
 	}
-	o.keyResourceID = keyID.String()
+	o.keyResourceID = createdKeyID.String()
 
-	publicKey, err := o.keyManager.GetPublicKey(ctx, keyID)
+	publicKey, err := o.keyManager.GetPublicKey(ctx, createdKeyID)
 	if err != nil {
 		return nil, err
 	}

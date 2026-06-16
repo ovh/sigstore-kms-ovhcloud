@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ovh/sigstore-kms-ovhcloud/pkg/config"
 	"github.com/ovh/sigstore-kms-ovhcloud/pkg/utils"
@@ -22,7 +23,7 @@ import (
 
 type KeyManager interface {
 	GetPublicKey(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
-	CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
+	CreateKey(ctx context.Context, keyResourceID uuid.UUID, algorithm string) (uuid.UUID, error)
 	Sign(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
 	Verify(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
 }
@@ -83,9 +84,10 @@ func (o *okmsKeyManager) GetPublicKey(ctx context.Context, keyResourceID uuid.UU
 	return publicKey, nil
 }
 
-func (o *okmsKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {
+func (o *okmsKeyManager) CreateKey(ctx context.Context, keyResourceID uuid.UUID, algorithm string) (uuid.UUID, error) {
 	createKeyRequest := types.CreateImportServiceKeyRequest{
-		Name: keyResourceID,
+		Name: fmt.Sprintf("cosign-%d", time.Now().UTC().UnixMilli()),
+		Id:   &keyResourceID,
 	}
 
 	if err := buildCreateKeyRequest(types.DigitalSignatureAlgorithms(algorithm), &createKeyRequest); err != nil {

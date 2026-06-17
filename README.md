@@ -135,6 +135,12 @@ operations.
 
 URI format : `ovhcloud://<key_id>`
 
+The `<key_id>` is a UUID, for example: `f47ac10b-58cc-4372-a567-0e02b2c3d479`. You can generate one using `uuidgen`:
+
+```bash
+uuidgen
+```
+
 ### Generating a key pair
 
 ```bash

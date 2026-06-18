@@ -147,7 +147,7 @@ uuidgen
 cosign generate-key-pair --kms ovhcloud://<key_id>
 ```
 
-The generated key will have the name: `cosign-<unix_ms_utc>`.
+The command generates a key pair using the ECDSA algorithm and writes the public key to `cosign.pub`.
 
 ### Extracting the public key
 

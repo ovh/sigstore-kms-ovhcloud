@@ -135,7 +135,7 @@ operations.
 
 URI format : `ovhcloud://<key_id>`
 
-The `<key_id>` is a UUID, for example: `f47ac10b-58cc-4372-a567-0e02b2c3d479`. You can generate one using [uuidgen](https://man7.org/linux/man-pages/man1/uuidgen.1.html):
+The `<key_id>` is a UUID, for example: `f47ac10b-58cc-4372-a567-0e02b2c3d479`. You can generate one using [uuidgen](https://man7.org/linux/man-pages/man1/uuidgen.1.html) (installed by default on macOS and several Linux distributions):
 
 ```bash
 uuidgen

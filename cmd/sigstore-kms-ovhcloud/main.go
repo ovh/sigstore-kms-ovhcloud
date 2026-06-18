@@ -16,7 +16,19 @@ import (
 
 const expectedProtocolVersion = "v1"
 
+const usage = `sigstore-kms-ovhcloud is a Sigstore KMS plugin for OVHcloud KMS.
+
+It is not meant to be run directly, but invoked by cosign through the "ovhcloud://<key_id>" KMS URI scheme.
+
+Documentation: https://github.com/ovh/sigstore-kms-ovhcloud#usage
+`
+
 func main() {
+	if len(os.Args) < 2 {
+		_, _ = fmt.Fprint(os.Stderr, usage)
+		os.Exit(1)
+	}
+
 	if protocolVersion := os.Args[1]; protocolVersion != expectedProtocolVersion {
 		err := fmt.Errorf("expected protocol version: %s, got %s", expectedProtocolVersion, protocolVersion)
 		_ = handler.WriteErrorResponse(os.Stdout, err)

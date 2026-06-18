@@ -12,6 +12,7 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/ovh/sigstore-kms-ovhcloud/pkg/utils"
@@ -128,7 +129,7 @@ func TestKeyManager_CreateKey(t *testing.T) {
 	t.Run("unsupported algorithm", func(t *testing.T) {
 		keyManager := keyManagerMock(mocks.NewAPIMock(t), uuid.New())
 
-		keyID, err := keyManager.CreateKey(context.Background(), "my-key", "unsupported")
+		keyID, err := keyManager.CreateKey(context.Background(), uuid.New(), "unsupported")
 
 		assert.Equal(t, uuid.Nil, keyID)
 		assert.Error(t, err)
@@ -141,7 +142,7 @@ func TestKeyManager_CreateKey(t *testing.T) {
 			CreateImportServiceKey(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, expectedError)
 
-		keyID, err := keyManagerMock(apiMock, uuid.New()).CreateKey(context.Background(), "my-key", string(types.ES256))
+		keyID, err := keyManagerMock(apiMock, uuid.New()).CreateKey(context.Background(), uuid.New(), string(types.ES256))
 
 		assert.Equal(t, uuid.Nil, keyID)
 		assert.Error(t, err)
@@ -153,7 +154,7 @@ func TestKeyManager_CreateKey(t *testing.T) {
 			CreateImportServiceKey(mock.Anything, mock.Anything, mock.Anything, mock.Anything).
 			Return(&types.GetServiceKeyResponse{Id: uuid.Nil}, nil)
 
-		keyID, err := keyManagerMock(apiMock, uuid.New()).CreateKey(context.Background(), "my-key", string(types.ES256))
+		keyID, err := keyManagerMock(apiMock, uuid.New()).CreateKey(context.Background(), uuid.New(), string(types.ES256))
 
 		assert.Equal(t, uuid.Nil, keyID)
 		assert.Error(t, err)
@@ -169,20 +170,19 @@ func TestKeyManager_CreateKey(t *testing.T) {
 	}
 	for _, test := range ecAlgorithmTests {
 		t.Run(string(test.algorithm), func(t *testing.T) {
-			okmsID, expectedID, keyName := uuid.New(), uuid.New(), "test-ec"
-			operations := []types.CryptographicUsages{types.Sign, types.Verify}
-			expectedRequest := types.CreateImportServiceKeyRequest{
-				Curve:      &test.curve,
-				Name:       keyName,
-				Operations: &operations,
-				Type:       utils.PtrTo(types.EC),
-			}
+			okmsID, expectedID, requestID := uuid.New(), uuid.New(), uuid.New()
 			apiMock := mocks.NewAPIMock(t)
 			apiMock.EXPECT().
-				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), expectedRequest).
+				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), mock.MatchedBy(func(req types.CreateImportServiceKeyRequest) bool {
+					return req.Id != nil && *req.Id == requestID &&
+						strings.HasPrefix(req.Name, "cosign-") &&
+						req.Type != nil && *req.Type == types.EC &&
+						req.Curve != nil && *req.Curve == test.curve &&
+						req.Operations != nil && len(*req.Operations) == 2
+				})).
 				Return(&types.GetServiceKeyResponse{Id: expectedID}, nil)
 
-			keyID, err := keyManagerMock(apiMock, okmsID).CreateKey(context.Background(), keyName, string(test.algorithm))
+			keyID, err := keyManagerMock(apiMock, okmsID).CreateKey(context.Background(), requestID, string(test.algorithm))
 
 			require.NoError(t, err)
 			assert.Equal(t, expectedID, keyID)
@@ -195,20 +195,19 @@ func TestKeyManager_CreateKey(t *testing.T) {
 
 	for _, algorithm := range rsaAlgorithmTests {
 		t.Run(string(algorithm), func(t *testing.T) {
-			okmsID, expectedID, keyName := uuid.New(), uuid.New(), "test-rsa"
-			operations := []types.CryptographicUsages{types.Sign, types.Verify}
-			expectedRequest := types.CreateImportServiceKeyRequest{
-				Name:       keyName,
-				Operations: &operations,
-				Type:       utils.PtrTo(types.RSA),
-				Size:       utils.PtrTo(types.N4096),
-			}
+			okmsID, expectedID, requestID := uuid.New(), uuid.New(), uuid.New()
 			apiMock := mocks.NewAPIMock(t)
 			apiMock.EXPECT().
-				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), expectedRequest).
+				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), mock.MatchedBy(func(req types.CreateImportServiceKeyRequest) bool {
+					return req.Id != nil && *req.Id == requestID &&
+						strings.HasPrefix(req.Name, "cosign-") &&
+						req.Type != nil && *req.Type == types.RSA &&
+						req.Size != nil && *req.Size == types.N4096 &&
+						req.Operations != nil && len(*req.Operations) == 2
+				})).
 				Return(&types.GetServiceKeyResponse{Id: expectedID}, nil)
 
-			keyID, err := keyManagerMock(apiMock, okmsID).CreateKey(context.Background(), keyName, string(algorithm))
+			keyID, err := keyManagerMock(apiMock, okmsID).CreateKey(context.Background(), requestID, string(algorithm))
 
 			require.NoError(t, err)
 			assert.Equal(t, expectedID, keyID)

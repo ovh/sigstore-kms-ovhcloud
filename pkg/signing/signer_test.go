@@ -28,7 +28,7 @@ import (
 // mockKeyManager implements the KeyManager interface
 type mockKeyManager struct {
 	getPublicKeyFn func(ctx context.Context, keyResourceID uuid.UUID) (crypto.PublicKey, error)
-	createKeyFn    func(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error)
+	createKeyFn    func(ctx context.Context, keyResourceID uuid.UUID, algorithm string) (uuid.UUID, error)
 	signFn         func(ctx context.Context, keyID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error)
 	verifyFn       func(ctx context.Context, keyResourceID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms, signature []byte) error
 }
@@ -40,16 +40,11 @@ func (m *mockKeyManager) GetPublicKey(ctx context.Context, keyID uuid.UUID) (cry
 	return nil, nil
 }
 
-func (m *mockKeyManager) CreateKey(ctx context.Context, keyResourceID, algorithm string) (uuid.UUID, error) {
+func (m *mockKeyManager) CreateKey(ctx context.Context, keyResourceID uuid.UUID, algorithm string) (uuid.UUID, error) {
 	if m.createKeyFn != nil {
 		return m.createKeyFn(ctx, keyResourceID, algorithm)
 	}
-
-	receivedKeyID, err := uuid.Parse(keyResourceID)
-	if err != nil {
-		return uuid.Nil, err
-	}
-	return receivedKeyID, nil
+	return keyResourceID, nil
 }
 
 func (m *mockKeyManager) Sign(ctx context.Context, keyID uuid.UUID, digest []byte, algorithm types.DigitalSignatureAlgorithms) ([]byte, error) {
@@ -165,7 +160,7 @@ func TestSigner_CreateKey(t *testing.T) {
 
 	t.Run("key manager error", func(t *testing.T) {
 		mock := &mockKeyManager{
-			createKeyFn: func(_ context.Context, _, _ string) (uuid.UUID, error) {
+			createKeyFn: func(_ context.Context, _ uuid.UUID, _ string) (uuid.UUID, error) {
 				return uuid.Nil, errors.New("error in create")
 			},
 		}

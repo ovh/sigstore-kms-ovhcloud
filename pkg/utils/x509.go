@@ -46,7 +46,7 @@ func LoadX509KeyPair(clientCert, clientKey string) ([]tls.Certificate, error) {
 
 	cert, err := tls.LoadX509KeyPair(clientCert, clientKey)
 	if err != nil {
-		return nil, fmt.Errorf("could not load certificate: %v", err)
+		return nil, fmt.Errorf("could not load certificate: %w", err)
 	}
 	return []tls.Certificate{cert}, nil
 }

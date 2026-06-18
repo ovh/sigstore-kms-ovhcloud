@@ -25,20 +25,20 @@ import (
 
 /*
 The following environment variable must be set:
-KMS_INTEGRATION_KEY_ID - UUID of an existing key on the target KMS instance.
+KMS_INTEGRATION_KEYID - UUID of an existing key on the target KMS instance.
+KMS_RESTAPI_OKMSID - OKMS ID
 
 Credentials are loaded from the standard configuration (environment variables or ~/.ovh-kms/okms.yaml).
 Or with these environment variables:
 KMS_RESTAPI_ENDPOINT - OKMS HTTP Endpoint
 KMS_RESTAPI_CA - OKMS HTTP CA (Optional)
-KMS_RESTAPI_OKMSID - OKMS ID
 KMS_RESTAPI_AUTH_CERT - OKMS HTTP Certificate
 KMS_RESTAPI_AUTH_KEY - OKMS HTTP Key
 */
 
 func TestMain(m *testing.M) {
-	if os.Getenv("KMS_INTEGRATION_KEY_ID") == "" {
-		panic("KMS_INTEGRATION_KEY_ID must be set")
+	if os.Getenv("KMS_INTEGRATION_KEYID") == "" {
+		panic("KMS_INTEGRATION_KEYID must be set")
 	}
 	os.Exit(m.Run())
 }
@@ -74,7 +74,7 @@ func deleteKey(t *testing.T, client *okms.Client, keyResourceID string) {
 }
 
 func TestNewOkmsSignerVerifier(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEYID")
 
 	cfg, err := config.NewConfig()
 	require.NoError(t, err)
@@ -100,7 +100,7 @@ func TestNewOkmsSignerVerifier(t *testing.T) {
 }
 
 func TestCreateKey(t *testing.T) {
-	signerVerifier, keyManager := loadSignerVerifier(t, "integration-test-new-key", crypto.SHA256)
+	signerVerifier, keyManager := loadSignerVerifier(t, uuid.New().String(), crypto.SHA256)
 
 	publicKey, err := signerVerifier.CreateKey(t.Context(), string(types.ES256))
 	require.NoError(t, err)
@@ -113,7 +113,7 @@ func TestCreateKey(t *testing.T) {
 }
 
 func TestPublicKey(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEYID")
 
 	signerVerifier, _ := loadSignerVerifier(t, keyID, crypto.SHA256)
 
@@ -123,7 +123,7 @@ func TestPublicKey(t *testing.T) {
 }
 
 func TestSignMessage(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEYID")
 
 	signerVerifier, _ := loadSignerVerifier(t, keyID, crypto.SHA256)
 
@@ -134,7 +134,7 @@ func TestSignMessage(t *testing.T) {
 }
 
 func TestVerifySignature(t *testing.T) {
-	keyID := os.Getenv("KMS_INTEGRATION_KEY_ID")
+	keyID := os.Getenv("KMS_INTEGRATION_KEYID")
 
 	signerVerifier, _ := loadSignerVerifier(t, keyID, crypto.SHA256)
 

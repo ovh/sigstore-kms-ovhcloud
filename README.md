@@ -133,13 +133,21 @@ These settings can be overwritten using environment variables:
 The plugin uses the `ovhcloud://` URI scheme followed by the specific key UUID you want to use for cryptographic
 operations.
 
-URI format : `ovhcloud://<key_uuid>`
+URI format : `ovhcloud://<key_id>`
+
+The `<key_id>` is a UUID, for example: `f47ac10b-58cc-4372-a567-0e02b2c3d479`. You can generate one using [uuidgen](https://man7.org/linux/man-pages/man1/uuidgen.1.html) (installed by default on macOS and several Linux distributions):
+
+```bash
+uuidgen
+```
 
 ### Generating a key pair
 
 ```bash
-cosign generate-key-pair --kms ovhcloud://<key_name>
+cosign generate-key-pair --kms ovhcloud://<key_id>
 ```
+
+The generated key will have the name: `cosign-<unix_ms_utc>`.
 
 ### Extracting the public key
 

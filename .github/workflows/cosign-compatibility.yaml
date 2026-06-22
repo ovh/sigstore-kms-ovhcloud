@@ -13,7 +13,7 @@ jobs:
       latest_version: ${{ steps.compare.outputs.latest_version }}
       needs_update: ${{ steps.compare.outputs.needs_update }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Get latest cosign release and compare with the current
         id: compare
@@ -42,7 +42,7 @@ jobs:
       - check-cosign-version
     if: needs.check-cosign-version.outputs.needs_update == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -64,7 +64,7 @@ jobs:
       - build-application
     if: needs.check-cosign-version.outputs.needs_update == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -130,7 +130,7 @@ jobs:
       - check-cosign-version
     if: needs.check-cosign-version.outputs.needs_update == 'true'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Download sigstore-kms-ovhcloud artifact
         uses: actions/download-artifact@v8
@@ -186,7 +186,7 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Update cosign version file and README badge
         run: |

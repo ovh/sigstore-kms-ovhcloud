@@ -199,14 +199,14 @@ jobs:
         uses: peter-evans/create-pull-request@v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          sign-commits: true
           commit-message: "chore: update cosign version from ${{ needs.check-cosign-version.outputs.current_version }} to ${{ needs.check-cosign-version.outputs.latest_version }}"
           title: "chore: update cosign version from ${{ needs.check-cosign-version.outputs.current_version }} to ${{ needs.check-cosign-version.outputs.latest_version }}"
           body: |
             ## Automated cosign version update
-            
+
             **Previous version**: `${{ needs.check-cosign-version.outputs.current_version }}`
             **New version**: `${{ needs.check-cosign-version.outputs.latest_version }}`
-            
+
             All integration and e2e tests passed with new version.
-          branch: chore/cosign-update-${{ needs.check-cosign-version.outputs.latest_version }}
-          reviewers: ovh/kms
+          branch: automation/cosign-update-${{ needs.check-cosign-version.outputs.latest_version }}

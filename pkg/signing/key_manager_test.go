@@ -174,7 +174,7 @@ func TestKeyManager_CreateKey(t *testing.T) {
 			apiMock := mocks.NewAPIMock(t)
 			apiMock.EXPECT().
 				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), mock.MatchedBy(func(req types.CreateImportServiceKeyRequest) bool {
-					return req.Id != nil && *req.Id == requestID &&
+					return req.Id != nil && *req.Id == requestID.String() &&
 						strings.HasPrefix(req.Name, "cosign-") &&
 						req.Type != nil && *req.Type == types.EC &&
 						req.Curve != nil && *req.Curve == test.curve &&
@@ -199,7 +199,7 @@ func TestKeyManager_CreateKey(t *testing.T) {
 			apiMock := mocks.NewAPIMock(t)
 			apiMock.EXPECT().
 				CreateImportServiceKey(mock.Anything, okmsID, utils.PtrTo(types.Jwk), mock.MatchedBy(func(req types.CreateImportServiceKeyRequest) bool {
-					return req.Id != nil && *req.Id == requestID &&
+					return req.Id != nil && *req.Id == requestID.String() &&
 						strings.HasPrefix(req.Name, "cosign-") &&
 						req.Type != nil && *req.Type == types.RSA &&
 						req.Size != nil && *req.Size == types.N4096 &&

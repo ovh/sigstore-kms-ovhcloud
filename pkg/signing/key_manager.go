@@ -87,7 +87,7 @@ func (o *okmsKeyManager) GetPublicKey(ctx context.Context, keyResourceID uuid.UU
 func (o *okmsKeyManager) CreateKey(ctx context.Context, keyResourceID uuid.UUID, algorithm string) (uuid.UUID, error) {
 	createKeyRequest := types.CreateImportServiceKeyRequest{
 		Name: fmt.Sprintf("cosign-%d", time.Now().UTC().UnixMilli()),
-		Id:   &keyResourceID,
+		Id:   utils.PtrTo(keyResourceID.String()),
 	}
 
 	if err := buildCreateKeyRequest(types.DigitalSignatureAlgorithms(algorithm), &createKeyRequest); err != nil {

@@ -10,7 +10,7 @@ require (
 	github.com/knadh/koanf/v2 v2.3.6
 	github.com/ovh/okms-sdk-go v0.5.4
 	github.com/sigstore/sigstore v1.10.9
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 )
 
 require (
@@ -35,5 +35,4 @@ require (
 	golang.org/x/term v0.45.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260810153831-ec0a7760b754 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

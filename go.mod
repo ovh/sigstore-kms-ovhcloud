@@ -1,6 +1,6 @@
 module github.com/ovh/sigstore-kms-ovhcloud
 
-go 1.25.8
+go 1.26.0
 
 require (
 	github.com/google/uuid v1.6.0
@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260810153831-ec0a7760b754 // indirect

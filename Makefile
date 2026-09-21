@@ -53,5 +53,5 @@ test: tool
 
 tool:
 	@echo " > Installing tools..."
-	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.11.3
+	GOBIN=$(BIN_DIR) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
 	GOBIN=$(BIN_DIR) go install gotest.tools/gotestsum@v1.13.0

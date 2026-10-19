@@ -9,7 +9,7 @@ require (
 	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/v2 v2.3.6
 	github.com/ovh/okms-sdk-go v0.5.4
-	github.com/sigstore/sigstore v1.10.10
+	github.com/sigstore/sigstore v1.11.1
 	github.com/stretchr/testify v1.12.1
 )
 

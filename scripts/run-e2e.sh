@@ -19,7 +19,7 @@ fi
 
 
 echo "[2/3] Signing..."
-if ! cosign sign-blob --key ovhcloud://"$KMS_INTEGRATION_KEYID" --bundle test.bundle test.txt; then
+if ! cosign sign-blob --yes --key ovhcloud://"$KMS_INTEGRATION_KEYID" --bundle test.bundle test.txt; then
   echo "TEST FAILED: Failed to sign with KMS key."
   exit 1
 fi

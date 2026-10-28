@@ -40,6 +40,24 @@ var okmsSupportedAlgorithms = []types.DigitalSignatureAlgorithms{
 
 const defaultAlgorithm = types.ES256
 
+func defaultHashFuncForKey(publicKey crypto.PublicKey) crypto.Hash {
+	key, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return crypto.SHA256
+	}
+
+	switch key.Curve {
+	case elliptic.P256():
+		return crypto.SHA256
+	case elliptic.P384():
+		return crypto.SHA384
+	case elliptic.P521():
+		return crypto.SHA512
+	default:
+		return crypto.SHA256
+	}
+}
+
 type okmsSignerVerifier struct {
 	keyManager    KeyManager
 	keyResourceID string
@@ -94,6 +112,9 @@ func (o *okmsSignerVerifier) PublicKey(opts ...signature.PublicKeyOption) (crypt
 }
 
 // SignMessage signs the provided message using the configured key and hash function.
+//
+// If no hash function is set in the options nor on the signer, one is selected based on the
+// key type (see defaultHashFuncForKey).
 func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.SignOption) ([]byte, error) {
 	var digest []byte
 	var err error
@@ -106,14 +127,6 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 		opt.ApplyCryptoSignerOpts(&signerOpts)
 	}
 
-	hashFunc := signerOpts.HashFunc()
-	if len(digest) == 0 {
-		digest, _, err = signature.ComputeDigestForSigning(message, hashFunc, okmsSupportedHashFuncs, opts...)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	keyID, err := o.keyID()
 	if err != nil {
 		return nil, err
@@ -122,9 +135,26 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 	if err != nil {
 		return nil, err
 	}
+
+	hashFunc := signerOpts.HashFunc()
+	if hashFunc == crypto.Hash(0) {
+		hashFunc = defaultHashFuncForKey(publicKey)
+	}
+
 	algorithm, err := determineAlgorithm(publicKey, hashFunc, signerOpts)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(digest) == 0 {
+		signOpts := make([]signature.SignOption, 0, len(opts)+1)
+		signOpts = append(signOpts, opts...)
+		signOpts = append(signOpts, options.WithCryptoSignerOpts(hashFunc))
+
+		digest, _, err = signature.ComputeDigestForSigning(message, hashFunc, okmsSupportedHashFuncs, signOpts...)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return o.keyManager.Sign(ctx, keyID, digest, algorithm)
@@ -133,6 +163,9 @@ func (o *okmsSignerVerifier) SignMessage(message io.Reader, opts ...signature.Si
 // VerifySignature verifies a digital signature.
 //
 // Return nil if the signature is valid, or an error if verification fails.
+//
+// If no hash function is set in the options nor on the signer, one is selected based on the
+// key type (see defaultHashFuncForKey).
 func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...signature.VerifyOption) error {
 	var digest []byte
 	var err error
@@ -145,14 +178,6 @@ func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...sig
 		opt.ApplyCryptoSignerOpts(&signerOpts)
 	}
 
-	hashFunc := signerOpts.HashFunc()
-	if len(digest) == 0 {
-		digest, _, err = signature.ComputeDigestForVerifying(message, hashFunc, okmsSupportedHashFuncs, opts...)
-		if err != nil {
-			return err
-		}
-	}
-
 	keyID, err := o.keyID()
 	if err != nil {
 		return err
@@ -161,10 +186,28 @@ func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...sig
 	if err != nil {
 		return err
 	}
+
+	hashFunc := signerOpts.HashFunc()
+	if hashFunc == crypto.Hash(0) {
+		hashFunc = defaultHashFuncForKey(publicKey)
+	}
+
 	algorithm, err := determineAlgorithm(publicKey, hashFunc, signerOpts)
 	if err != nil {
 		return err
 	}
+
+	if len(digest) == 0 {
+		verifyOpts := make([]signature.VerifyOption, 0, len(opts)+1)
+		verifyOpts = append(verifyOpts, opts...)
+		verifyOpts = append(verifyOpts, options.WithCryptoSignerOpts(hashFunc))
+
+		digest, _, err = signature.ComputeDigestForVerifying(message, hashFunc, okmsSupportedHashFuncs, verifyOpts...)
+		if err != nil {
+			return err
+		}
+	}
+
 	sigBytes, err := io.ReadAll(sig)
 	if err != nil {
 		return fmt.Errorf("reading signature: %w", err)
@@ -177,16 +220,27 @@ func (o *okmsSignerVerifier) VerifySignature(sig, message io.Reader, opts ...sig
 func determineAlgorithm(publicKey crypto.PublicKey, hashFunc crypto.Hash, opts crypto.SignerOpts) (types.DigitalSignatureAlgorithms, error) {
 	switch key := publicKey.(type) {
 	case *ecdsa.PublicKey:
+		var expectedHashFunc crypto.Hash
+		var algorithm types.DigitalSignatureAlgorithms
+
 		switch key.Curve {
 		case elliptic.P256():
-			return types.ES256, nil
+			expectedHashFunc, algorithm = crypto.SHA256, types.ES256
 		case elliptic.P384():
-			return types.ES384, nil
+			expectedHashFunc, algorithm = crypto.SHA384, types.ES384
 		case elliptic.P521():
-			return types.ES512, nil
+			expectedHashFunc, algorithm = crypto.SHA512, types.ES512
 		default:
 			return "", fmt.Errorf("unsupported elliptic curve: %s", key.Curve.Params().Name)
 		}
+
+		// When signing/verifying with EC256/EC384/EC521 the hash function
+		// is not up to the caller but is imposed by the signature algorithm.
+		// Return the an error in case of inconsistent parameters:
+		if hashFunc != expectedHashFunc {
+			return "", fmt.Errorf("unsupported hash function %s for %s key: expected %s", hashFunc, key.Curve.Params().Name, expectedHashFunc)
+		}
+		return algorithm, nil
 	case *rsa.PublicKey:
 		algorithmPrefix := "RS"
 		if _, ok := opts.(*rsa.PSSOptions); ok {

@@ -20,6 +20,16 @@ updates:
       interval: "weekly"
     allow:
       - dependency-type: all
+    groups:
+      # Pool all minor and patch Go module updates into a single PR.
+      # Major updates are intentionally left out of the group so that each
+      # one still gets its own dedicated PR.
+      go-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
     open-pull-requests-limit: 20
     reviewers:
       - ovh/kms

@@ -34,9 +34,13 @@ install: build
 integration-test: tool
 	@echo " > Running integration tests..."
 	@mkdir -p $(BUILD_DIR)
-	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/integration-coverage.out --tags=integration ./... > $(BUILD_DIR)/integration-test-results.json
-	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/integration-junit.xml --raw-command -- cat $(BUILD_DIR)/integration-test-results.json
-	$(GO) tool cover -html=$(BUILD_DIR)/integration-coverage.out -o $(BUILD_DIR)/integration-coverage.html
+	@status=0; \
+	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/integration-coverage.out --tags=integration ./... > $(BUILD_DIR)/integration-test-results.json || status=$$?; \
+	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/integration-junit.xml --raw-command -- cat $(BUILD_DIR)/integration-test-results.json || true; \
+	if [ -f $(BUILD_DIR)/integration-coverage.out ]; then \
+		$(GO) tool cover -html=$(BUILD_DIR)/integration-coverage.out -o $(BUILD_DIR)/integration-coverage.html || true; \
+	fi; \
+	exit $$status
 
 lint: tool
 	@echo " > Linting code..."
@@ -47,9 +51,13 @@ re: clean build
 test: tool
 	@echo " > Running tests..."
 	@mkdir -p $(BUILD_DIR)
-	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/coverage.out ./... > $(BUILD_DIR)/test-results.json
-	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/junit.xml --raw-command -- cat $(BUILD_DIR)/test-results.json
-	$(GO) tool cover -html=$(BUILD_DIR)/coverage.out -o $(BUILD_DIR)/coverage.html
+	@status=0; \
+	$(GO) test -v -json -coverprofile=$(BUILD_DIR)/coverage.out ./... > $(BUILD_DIR)/test-results.json || status=$$?; \
+	$(GOTESTSUM) --junitfile=$(BUILD_DIR)/junit.xml --raw-command -- cat $(BUILD_DIR)/test-results.json || true; \
+	if [ -f $(BUILD_DIR)/coverage.out ]; then \
+		$(GO) tool cover -html=$(BUILD_DIR)/coverage.out -o $(BUILD_DIR)/coverage.html || true; \
+	fi; \
+	exit $$status
 
 tool:
 	@echo " > Installing tools..."
